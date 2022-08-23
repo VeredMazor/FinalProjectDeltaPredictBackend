@@ -11,7 +11,7 @@ from waitress import serve
 app = Flask (__name__)
 app._static_folder = ''
 
-#CORS(app)
+
 
 @app.route("/")
 @app.route('/data')
