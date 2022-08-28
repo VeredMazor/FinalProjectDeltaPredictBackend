@@ -1,21 +1,25 @@
-# This is a sample Python script.
+ This is a sample Python script..
 
-# Press Shift+F10 to execute it or replace it with your code.
+# Press Shift+F10 to execute it or replace it with your code..
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-from flask import Flask, render_template
+from flask import Flask, render_template, url_for  # impor inctens of flask
 from flask import request
 from waitress import serve
 from flask_cors import CORS, cross_origin
+from flask import url_for
+import datetime
 
 
-app = Flask(__name__)
-CORS(app)
+x = datetime.datetime.now()
+
+app = Flask (__name__) #becuase the instanc we can call flask and put the name val.
 app._static_folder = ''
 
+CORS(app)
 
-@app.route("/")
-@app.route('/data')
+@app.route("/") #Decorator in python, its basically saying that what url in your website i am going to navigate through and display you some html code.
+
 def get_time():
     # Returning an api for showing in  reactjs
     return {
@@ -25,26 +29,24 @@ def get_time():
         "programming": "python"
     }
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        return "Thanks";
+    else:
+        return "Thanks";
 
-@app.route('/members')
-def members():
-    #Returning an api for showing in  reactjs
-   return {
-        'Name': "vered",
-        "Age": "22",
-        "Date": x,
-        "programming": "python"
-  }
+@app.route('/user/<username>')
+def profile(username):
+    return f'{username}\'s profile'
 
-
-import datetime
-
-x = datetime.datetime.now()
 
 if __name__ == "__main__":
-    app.run(debug=True)
-    #serve(app, host="0.0.0.0", port=5000)
+   app.run(debug=True)
+    #serve(app, host="0.0.0.0", port=8080)
+
+
 
 
 def create_app():
-    return app
+        return app
