@@ -1,6 +1,6 @@
 # This is a sample Python script..
 
-# Press Shift+F10 to execute it or replace it with your code.
+# Press Shift+F10 to execute it or replace it with your code..
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 from flask import Flask, render_template, url_for  # impor inctens of flask
@@ -29,9 +29,12 @@ def get_time():
         "programming": "python"
     }
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return 'fgklfdmgkldm'
+    if request.method == 'POST':
+        return "Thanks";
+    else:
+        return "Thanks";
 
 @app.route('/user/<username>')
 def profile(username):
