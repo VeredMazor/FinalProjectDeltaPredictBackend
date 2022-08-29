@@ -16,7 +16,7 @@ app._static_folder = ''
 app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app)
 #cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:19006/"}})
-
+#cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:19006/"}})
 
 @app.route(
     "/")  # Decorator in python, its basically saying that what url in your website i am going to navigate through and display you some html code.
