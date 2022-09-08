@@ -1,25 +1,26 @@
 # Press Shift+F10 to execute it or replace it with your code..
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-from flask import Flask, render_template, jsonify, url_for  # impor inctens of flask
+import data as data
+from flask import Flask, render_template, jsonify, url_for, redirect, Response
 from flask import request, make_response
-from waitress import serve
 from flask_cors import CORS, cross_origin
-from flask import url_for
 import datetime
 import requests
+from pymongo import MongoClient
 
 x = datetime.datetime.now()
-
-app = Flask(__name__)  # becuase the instanc we can call flask and put the name val.
+cluster = MongoClient(
+    "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+app = Flask(__name__)
 app._static_folder = ''
 app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app)
-#cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:19006/"}})
-#cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:19006/"}})
+db = cluster["DeltaPredictDB"]
 
-@app.route(
-    "/")  # Decorator in python, its basically saying that what url in your website i am going to navigate through and display you some html code.
+
+# cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:19006/"}})
+
+@app.route("/")
 def get_time():
     # Returning an api for showing in  reactjs
     return {
@@ -30,19 +31,36 @@ def get_time():
     }
 
 
-def build_actual_response(response):
-    #response.headers.add("Access-Control-Allow-Origin",  "*")
-    return response
-@app.route('/registrazione', methods=['GET', 'POST'])
+@app.route('/home', methods=['GET', 'POST'])
 @cross_origin()
 def login():
+    req = request.get_json()
     if request.method == 'POST':
-        req = request.get_json()
         print(req["name"])
         return jsonify({'name': req["name"]})
 
-    else:
-        return "response"
+    elif request.method == 'GET':
+        json_string = "{'a': 1, 'b': 2}"
+        return Response(json_string, mimetype='application/json')
+
+
+@app.route('/authenticate', methods=['GET', 'POST'])
+@cross_origin()
+def check():
+    req = request.get_json()
+    if request.method == 'POST':
+        # check if login details are correct
+        if db.users.count_documents({'userName': req["name"], 'Password': req["Password"]}, limit=1) != 0:
+            return jsonify({'result': "true"})
+        return jsonify({'result': "false"})
+        # insert to DB
+        # insert = {'userName': req["name"], 'Password': req["Password"]}
+        # db.users.insert_one(insert)
+
+
+    elif request.method == 'GET':
+        json_string = "{'a': 1, 'b': 2}"
+        return Response(json_string, mimetype='application/json')
 
 
 if __name__ == "__main__":
