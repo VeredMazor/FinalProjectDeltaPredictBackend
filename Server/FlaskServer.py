@@ -1,11 +1,7 @@
-# Press Shift+F10 to execute it or replace it with your code..
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import data as data
 from flask import Flask, render_template, jsonify, url_for, redirect, Response
 from flask import request, make_response
 from flask_cors import CORS, cross_origin
 import datetime
-import requests
 from pymongo import MongoClient
 
 x = datetime.datetime.now()
@@ -30,12 +26,13 @@ def get_time():
         "programming": "python"
     }
 
-
 @app.route('/home', methods=['GET', 'POST'])
+
 @cross_origin()
 def login():
     req = request.get_json()
     if request.method == 'POST':
+
         print(req["name"])
         return jsonify({'name': req["name"]})
 
@@ -63,10 +60,9 @@ def check():
         return Response(json_string, mimetype='application/json')
 
 
+
 if __name__ == "__main__":
     app.run(debug=True)
     # serve(app, host="0.0.0.0", port=8080)
 
 
-def create_app():
-    return app
