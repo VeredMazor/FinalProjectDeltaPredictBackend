@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/Server" isTestSource="false" />
     </content>
     <content url="file://$MODULE_DIR$/Server/venv" />
-    <orderEntry type="jdk" jdkName="Python 3.9 (FinalProjectDeltaPredictBackend) (2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (finalPythonProject)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
