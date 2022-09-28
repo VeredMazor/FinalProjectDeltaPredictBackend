@@ -17,6 +17,7 @@ import requests
 from finvizfinance.quote import finvizfinance
 import json
 from finvizfinance.screener.overview import Overview
+from waitress import serve
 
 # get db
 cluster = MongoClient(
@@ -122,12 +123,27 @@ def check():
         return Response(json_string, mimetype='application/json')
 
 
+
+
+@app.route('/signnup', methods=['GET', 'POST'])
+@cross_origin()
+def addUser():
+    req = request.get_json()
+    if request.method == 'POST':
+        #if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
+            #return jsonify({'result': "false"})
+        #else:
+            insert = {'Email': req["Email"], 'Password': req["Password"]}
+            db.users.insert_one(insert)
+            return jsonify({'result': "true"})
+
+
 if __name__ == "__main__":
     get_most('Most Active')
     # get_most('Top Gainers')
     get_most('Top Losers')
-    app.run(debug=True)
-    # serve(app, host="0.0.0.0", port=8080)
+    #app.run(debug=True)
+    serve(app, host="192.168.1.22", port=5000)
 
 
 def create_app():
