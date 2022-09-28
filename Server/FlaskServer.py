@@ -6,6 +6,7 @@ import datetime
 import jsonpickle
 import time
 import csv
+import flask
 from pymongo import MongoClient
 import numpy as np
 # Data Source
@@ -20,6 +21,8 @@ from finvizfinance.screener.overview import Overview
 from waitress import serve
 
 # get db
+from waitress import serve
+
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
 app = Flask(__name__)
@@ -51,32 +54,39 @@ def get_most(signal):
     foverview = Overview()
     filters_dict = {'Index': 'S&P 500', 'Sector': 'Any'}
     foverview.set_filter(signal=signal, filters_dict=filters_dict)
-    df = foverview.screener_view()
-    df.to_csv(signal + '.csv', columns=['Ticker'])
+    try:
+        df = foverview.screener_view()
+        df.to_csv(signal + '.csv', columns=['Ticker'], mode='w')
+    except:
+        return
 
 
 def get_stock_data(symbol):
     res = []
     result_list = []
-    with open(symbol, newline='') as f:
-        reader = csv.reader(f)
-        data = list(reader)
-        for i in data[1:10]:
-            ticker = yf.Ticker(i[1])
-            # company_name = ticker.info['longName']
-            # print(company_name)
-            todays_data = ticker.history(period='1d')
-            x = {
-                "symbol": i[1],
-                "close": str(round(todays_data['Close'][0], 3)),
-            }
-            y = (jsonpickle.encode(x))
-            res.append(y)
+    try:
+        with open(symbol, newline='') as f:
+            reader = csv.reader(f)
+            data = list(reader)
+            if len(data) != 0:
+                for i in data[1:6]:
+                    ticker = yf.Ticker(i[1])
+                    # company_name = ticker.info['longName']
+                    # print(company_name)
+                    todays_data = ticker.history(period='1d')
+                    x = {
+                        "symbol": i[1],
+                        "close": str(round(todays_data['Close'][0], 3)),
+                    }
+                    y = (jsonpickle.encode(x))
+                    res.append(y)
+    except:
+        return res
     return res
 
 
 def get_specific_stock_data(symbol):
-    res = []
+    res = {}
     ticker = yf.Ticker(symbol)
     todays_data = ticker.history(period='1d')
     # company_name = ticker.info['longName']
@@ -84,24 +94,40 @@ def get_specific_stock_data(symbol):
     x = {
         # "company": company_name,
         "symbol": symbol,
-        "close": str(todays_data['Close'][0]),
+        "close": str(round(todays_data['Close'][0], 3)),
     }
     y = jsonpickle.encode(x)
-    res.append(y)
-    print(res)
-    return res
+   # res.append(y)
+    return y
 
 
-@app.route('/activeStockData')
+@app.route('/activeStockData', methods=['GET'])
 @cross_origin()
 def getMostActive():
-    return get_stock_data('Most Active.csv')
+    if flask.request.method == 'GET':
+        return get_stock_data('Most Active.csv')
 
 
-@app.route('/losersStockData')
+@app.route('/spesificStock', methods=['POST'])
+@cross_origin()
+def specific_data():
+    req = request.get_json()
+    if request.method == 'POST':
+        return get_specific_stock_data(req["Symbol"])
+
+
+@app.route('/losersStockData', methods=['GET'])
 @cross_origin()
 def getTopLosers():
-    return get_stock_data('Top Losers.csv')
+    if flask.request.method == 'GET':
+        return get_stock_data('Top Losers.csv')
+
+
+@app.route('/gainersStockData', methods=['GET'])
+@cross_origin()
+def get_top_gainers():
+    if flask.request.method == 'GET':
+        return get_stock_data('Top Gainers.csv')
 
 
 @app.route('/authenticate', methods=['GET', 'POST'])
@@ -139,11 +165,14 @@ def addUser():
 
 
 if __name__ == "__main__":
+    # app.run(debug=True)
+    serve(app, host="0.0.0.0", port=5000, threads=7)
     get_most('Most Active')
-    # get_most('Top Gainers')
+    get_most('Top Gainers')
     get_most('Top Losers')
-    #app.run(debug=True)
-    serve(app, host="192.168.1.22", port=5000)
+
+    # app.run(threaded=True)
+
 
 
 def create_app():
