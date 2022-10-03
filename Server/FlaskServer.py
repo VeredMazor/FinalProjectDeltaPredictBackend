@@ -12,14 +12,15 @@ import numpy as np
 # Data Source
 import yfinance as yf
 import pandas as pd
-import bs4
-from bs4 import BeautifulSoup
 import requests
-from finvizfinance.quote import finvizfinance
+import json
 import json
 from finvizfinance.screener.overview import Overview
-from waitress import serve
+import finviz
+from finvizfinance.quote import finvizfinance
 
+from waitress import serve
+# import simplejson as json
 # get db
 from waitress import serve
 
@@ -77,9 +78,11 @@ def get_stock_data(symbol):
                     x = {
                         "symbol": i[1],
                         "close": str(round(todays_data['Close'][0], 3)),
+
                     }
                     y = (jsonpickle.encode(x))
                     res.append(y)
+
     except:
         return res
     return res
@@ -95,10 +98,49 @@ def get_specific_stock_data(symbol):
         # "company": company_name,
         "symbol": symbol,
         "close": str(round(todays_data['Close'][0], 3)),
+        "high": str(ticker.info['dayHigh']),
+        "volume": str(todays_data['Volume'][0]),
+        "averageVolume": str(ticker.info['averageVolume']),
+        "marketCap": str(ticker.info['marketCap']),
+        "name": str(ticker.info['shortName']),
+        "previousClose": str(ticker.info['previousClose']),
+        "dayLow": str(ticker.info['dayLow']),
+        "logo": str(ticker.info['logo_url'])
+
     }
-    y = jsonpickle.encode(x)
-   # res.append(y)
+    y = json.dumps(x)
+    # res.append(y)
     return y
+
+
+def get_data(name):
+    ticker = yf.Ticker(name)
+    todays_data = ticker.history(period='1d')
+    stock = finvizfinance(name)
+    stock_description = stock.ticker_description()
+    x = stock.ticker_fundament()
+    x.update({'info': stock_description})
+    x.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
+    x.update({'volume': str(todays_data['Volume'][0])})
+    print(stock.ticker_news())
+    # x.update({ "logo": str(ticker.info['logo_url'])})
+    return json.dumps(x)
+
+
+def get_stock_news(name):
+    stock = finvizfinance(name)
+    news_df = stock.ticker_news()
+    print(news_df)
+
+
+@app.route('/fundamental', methods=['POST'])
+@cross_origin()
+def get():
+    req = request.get_json()
+    if flask.request.method == 'POST':
+        return get_data(req["Symbol"])
+
+
 
 
 @app.route('/activeStockData', methods=['GET'])
@@ -149,30 +191,26 @@ def check():
         return Response(json_string, mimetype='application/json')
 
 
-
-
 @app.route('/signnup', methods=['GET', 'POST'])
 @cross_origin()
 def addUser():
     req = request.get_json()
     if request.method == 'POST':
-        #if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
-            #return jsonify({'result': "false"})
-        #else:
-            insert = {'Email': req["Email"], 'Password': req["Password"]}
-            db.users.insert_one(insert)
-            return jsonify({'result': "true"})
+        # if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
+        # return jsonify({'result': "false"})
+        # else:
+        insert = {'Email': req["Email"], 'Password': req["Password"]}
+        db.users.insert_one(insert)
+        return jsonify({'result': "true"})
 
 
 if __name__ == "__main__":
     # app.run(debug=True)
-    serve(app, host="0.0.0.0", port=5000, threads=7)
+    serve(app, host="0.0.0.0", port=5000, threads=6)
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
-
     # app.run(threaded=True)
-
 
 
 def create_app():
