@@ -1,28 +1,31 @@
-import data as data
-from flask import Flask, render_template, jsonify, url_for, redirect, Response
-from flask import request, make_response
-from flask_cors import CORS, cross_origin
-import datetime
-import jsonpickle
-import time
 import csv
+import json
+import os
+
 import flask
-from pymongo import MongoClient
-import numpy as np
+import jsonpickle
+import pandas as pd
 # Data Source
 import yfinance as yf
-import pandas as pd
-import requests
-import json
-import json
-from finvizfinance.screener.overview import Overview
-import finviz
 from finvizfinance.quote import finvizfinance
-
-from waitress import serve
+from finvizfinance.screener.overview import Overview
+from flask import Flask, jsonify, Response
+from flask import request
+from flask_cors import CORS, cross_origin
+from pymongo import MongoClient
+# importing  all the
+# functions defined in test.py
 # import simplejson as json
 # get db
 from waitress import serve
+import sys
+
+# caution: path[0] is reserved for script path (or '' in REPL)
+from Logic.SentimentAnlysis import sentiment_on_all_files
+from Logic.WebCrawling import get_stock_news, get_sp_list
+
+sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
+from Logic import WebCrawling
 
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
@@ -40,14 +43,6 @@ def get_time():
         "Date": "x",
         "programming": "python"
     }
-
-
-def get_sp_list():
-    # Scrape the entire S&P500 list from Wikipedia into a Pandas DataFrame;
-    table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
-    df = table[0]
-    df.to_csv('S&P500-Info.csv')
-    df.to_csv("S&P500-Symbols.csv", columns=['Symbol'])
 
 
 def get_most(signal):
@@ -122,25 +117,45 @@ def get_data(name):
     x.update({'info': stock_description})
     x.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
     x.update({'volume': str(todays_data['Volume'][0])})
-    print(stock.ticker_news())
     # x.update({ "logo": str(ticker.info['logo_url'])})
     return json.dumps(x)
 
 
-def get_stock_news(name):
+def favorites_data(name):
+    d = {}
+    ticker = yf.Ticker(name)
+    todays_data = ticker.history(period='1d')
     stock = finvizfinance(name)
-    news_df = stock.ticker_news()
-    print(news_df)
+    x = stock.ticker_fundament()
+    d.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
+    d.update({"dayLow": str(ticker.info['dayLow'])})
+    d.update({"dayHigh": str(ticker.info['dayHigh'])})
+    d.update({"change": str(x['Change'])})
+    d.update({'volume': str(todays_data['Volume'][0])})
+    return json.dumps(d)
 
 
-@app.route('/fundamental', methods=['POST'])
+def get_data_for_favorites(favorites):
+    x = {}
+    for f in favorites:
+        x.update({f: favorites_data(f)})
+    return x
+
+#gets current data for stocks in favorites screen
+@app.route('/favoritesData', methods=['POST'])
 @cross_origin()
 def get():
     req = request.get_json()
     if flask.request.method == 'POST':
+        return get_data_for_favorites(req["Symbols"])
+
+
+@app.route('/fundamental', methods=['POST'])
+@cross_origin()
+def getData():
+    req = request.get_json()
+    if flask.request.method == 'POST':
         return get_data(req["Symbol"])
-
-
 
 
 @app.route('/activeStockData', methods=['GET'])
@@ -204,12 +219,27 @@ def addUser():
         return jsonify({'result': "true"})
 
 
+def spList():
+        try:
+            f = open("S&P500-Symbols.csv")
+            # Do something with the file
+        except IOError:
+            print("File not accessible")
+            get_sp_list()
+        finally:
+            f.close()
+
+
+
 if __name__ == "__main__":
     # app.run(debug=True)
+    spList()
+    #get_stock_news()
     serve(app, host="0.0.0.0", port=5000, threads=6)
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
+
     # app.run(threaded=True)
 
 
