@@ -1,4 +1,5 @@
 import data as data
+import pymongo
 from flask import Flask, render_template, jsonify, url_for, redirect, Response
 from flask import request, make_response
 from flask_cors import CORS, cross_origin
@@ -7,7 +8,7 @@ import jsonpickle
 import time
 import csv
 import flask
-from pymongo import MongoClient
+from pymongo import MongoClient, aggregation
 import numpy as np
 # Data Source
 import yfinance as yf
@@ -136,7 +137,7 @@ def check():
     req = request.get_json()
     if request.method == 'POST':
         # check if login details are correct
-        if db.users.count_documents({'userName': req["name"], 'Password': req["Password"]}, limit=1) != 0:
+        if db.users.count_documents({'Email': req["name"], 'Password': req["Password"]}, limit=1) != 0:
             return jsonify({'result': "true"})
         return jsonify({'result': "false"})
         # insert to DB
@@ -156,17 +157,38 @@ def check():
 def addUser():
     req = request.get_json()
     if request.method == 'POST':
-        #if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
-            #return jsonify({'result': "false"})
-        #else:
+        if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
+            return jsonify({'result': "false"})
+        else:
             insert = {'Email': req["Email"], 'Password': req["Password"]}
             db.users.insert_one(insert)
             return jsonify({'result': "true"})
 
+@app.route('/getuser', methods=['GET', 'POST'])
+@cross_origin()
+def getUserData():
+    req = request.get_json()
+    if request.method == 'POST':
+        print(req['otherParam'])
+        for itm in db.favoriteList.find({"Email": req['otherParam']}):
+            if(itm.get('Email') == req['otherParam']):
+                print(itm.get('FavoriteStocks'))
+                return jsonify({'result': itm.get('FavoriteStocks')}) #TO DO return the stocks list favorit to user
+
+        print(req['otherParam'])
+        insert = {'Email': req['otherParam'], 'FavoriteStocks': []}
+        db.favoriteList.insert_one(insert)
+        return ("itm.get('_id')")
+
+
+
+
+
+
 
 if __name__ == "__main__":
-    # app.run(debug=True)
-    serve(app, host="0.0.0.0", port=5000, threads=7)
+    app.run(debug=True)
+    #serve(app, host="0.0.0.0", port=5000, threads=7)
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
