@@ -1,4 +1,3 @@
-
 import data as data
 import pymongo
 from flask import Flask, render_template, jsonify, url_for, redirect, Response
@@ -31,12 +30,11 @@ from pymongo import MongoClient
 from waitress import serve
 import sys
 
-# caution: path[0] is reserved for script path (or '' in REPL)
-from Logic.SentimentAnlysis import sentiment_on_all_files
+
 from Logic.WebCrawling import get_stock_news, get_sp_list
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
-from Logic import WebCrawling
+
 
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
@@ -150,15 +148,20 @@ def get_data_for_favorites(favorites):
     x = {}
     for f in favorites:
         x.update({f: favorites_data(f)})
+    print(x)
     return x
 
 #gets current data for stocks in favorites screen
 @app.route('/favoritesData', methods=['POST'])
 @cross_origin()
-def get():
+def getFavoriteStocks():
     req = request.get_json()
-    if flask.request.method == 'POST':
-        return get_data_for_favorites(req["Symbols"])
+    if request.method == 'POST':
+        print(req['otherParam'])
+        for itm in db.favoriteList.find({"Email": req['otherParam']}):
+            if (itm.get('Email') == req['otherParam']):
+                print(itm.get('FavoriteStocks'))
+                return get_data_for_favorites(itm.get('FavoriteStocks'))
 
 
 @app.route('/fundamental', methods=['POST'])
