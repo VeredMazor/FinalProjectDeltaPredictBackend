@@ -1,4 +1,3 @@
-
 import data as data
 import pymongo
 from flask import Flask, render_template, jsonify, url_for, redirect, Response
@@ -19,6 +18,7 @@ import pandas as pd
 # Data Source
 import yfinance as yf
 from finvizfinance.quote import finvizfinance
+from finviz.screener import Screener
 from finvizfinance.screener.overview import Overview
 from flask import Flask, jsonify, Response
 from flask import request
@@ -152,7 +152,8 @@ def get_data_for_favorites(favorites):
         x.update({f: favorites_data(f)})
     return x
 
-#gets current data for stocks in favorites screen
+
+# gets current data for stocks in favorites screen
 @app.route('/favoritesData', methods=['POST'])
 @cross_origin()
 def get():
@@ -230,6 +231,7 @@ def addUser():
             db.users.insert_one(insert)
             return jsonify({'result': "true"})
 
+
 @app.route('/getuser', methods=['GET', 'POST'])
 @cross_origin()
 def getUserData():
@@ -237,9 +239,9 @@ def getUserData():
     if request.method == 'POST':
         print(req['otherParam'])
         for itm in db.favoriteList.find({"Email": req['otherParam']}):
-            if(itm.get('Email') == req['otherParam']):
+            if (itm.get('Email') == req['otherParam']):
                 print(itm.get('FavoriteStocks'))
-                return jsonify({'result': itm.get('FavoriteStocks')}) #TO DO return the stocks list favorit to user
+                return jsonify({'result': itm.get('FavoriteStocks')})  # TO DO return the stocks list favorit to user
 
         print(req['otherParam'])
         insert = {'Email': req['otherParam'], 'FavoriteStocks': []}
@@ -247,31 +249,50 @@ def getUserData():
         return ("itm.get('_id')")
 
 
+def get_sector_stocks(sector):
+    d={}
+    sec = "sec_" + sector["name"]
+    filters = ['idx_sp500','exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
+    stock_list = Screener(filters=filters, table='Overview', order='price')  # Get the performance ta
+    # list=[]
+    # for d in stock_list.data:
+    #     list.append(d["Ticker"])
+    # res=get_data_for_favorites(list)
+    # print (res)
+    # Export the screener results to .csv
+    return json.dumps(stock_list.data)
 
 
+
+@app.route('/getSectorStocks', methods=['GET', 'POST'])
+@cross_origin()
+def get_Sector_Data():
+    req = request.get_json()
+    if request.method == 'POST':
+        return get_sector_stocks(req['Sector'])
 
 
 
 def spList():
-        try:
-            f = open("S&P500-Symbols.csv")
-            # Do something with the file
-        except IOError:
-            print("File not accessible")
-            get_sp_list()
-        finally:
-            f.close()
-
+    try:
+        f = open("S&P500-Symbols.csv")
+        # Do something with the file
+    except IOError:
+        print("File not accessible")
+        get_sp_list()
+    finally:
+        f.close()
 
 
 if __name__ == "__main__":
     # app.run(debug=True)
     spList()
-    #get_stock_news()
+    # get_stock_news()
     serve(app, host="0.0.0.0", port=5000, threads=6)
-    get_most('Most Active')
-    get_most('Top Gainers')
-    get_most('Top Losers')
+    # get_most('Most Active')
+    # get_most('Top Gainers')
+    # get_most('Top Losers')
+
 
     # app.run(threaded=True)
 
