@@ -14,10 +14,11 @@ from pymongo import MongoClient, aggregation
 import numpy as np
 import jsonpickle
 import pandas as pd
-
+from yahooquery import Ticker
 # Data Source
 import yfinance as yf
 from finvizfinance.quote import finvizfinance
+from finviz.screener import Screener
 from finvizfinance.screener.overview import Overview
 from flask import Flask, jsonify, Response
 from flask import request
@@ -130,38 +131,52 @@ def get_data(name):
     return json.dumps(x)
 
 
-def favorites_data(name):
+def favorites_data(ticker_list):
     d = {}
-    ticker = yf.Ticker(name)
-    todays_data = ticker.history(period='1d')
-    stock = finvizfinance(name)
-    x = stock.ticker_fundament()
-    d.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
-    d.update({"dayLow": str(ticker.info['dayLow'])})
-    d.update({"dayHigh": str(ticker.info['dayHigh'])})
-    d.update({"change": str(x['Change'])})
-    d.update({'volume': str(todays_data['Volume'][0])})
-    return json.dumps(d)
+    # ticker = yf.Ticker(name)
+    # todays_data = ticker.history(period='1d')
+    # # stock = finvizfinance(name)
+    # # x = stock.ticker_fundament()
+    # d.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
+    # d.update({"dayLow": str(ticker.info['dayLow'])})
+    # d.update({"dayHigh": str(ticker.info['dayHigh'])})
+    # # d.update({"change": str(x['Change'])})
+    # d.update({'volume': str(todays_data['Volume'][0])})
+    # return json.dumps(d)
+    all_symbols = " ".join(ticker_list)
+    myInfo = Ticker(all_symbols)
+    myDict = myInfo.price
+    x = []
+
+    for ticker in ticker_list:
+        ticker = str(ticker)
+        d.update({'currentPrice': str(myDict[ticker]['regularMarketPrice'])})
+        d.update({"dayLow": str(myDict[ticker]['regularMarketDayLow'])})
+        d.update({"dayHigh": str(myDict[ticker]['regularMarketDayHigh'])})
+        d.update({'volume': str(myDict[ticker]['regularMarketVolume'])})
+        d.update({"symbol":ticker})
+        x.append( json.dumps(d))
+    return json.dumps(x)
 
 
 def get_data_for_favorites(favorites):
     x = {}
     for f in favorites:
         x.update({f: favorites_data(f)})
-    print(x)
     return x
 
-#gets current data for stocks in favorites screen
+
+# gets current data for stocks in favorites screen
 @app.route('/favoritesData', methods=['POST'])
 @cross_origin()
 def getFavoriteStocks():
     req = request.get_json()
+    email=req['email']["otherParam"]
     if request.method == 'POST':
-        print(req['otherParam'])
-        for itm in db.favoriteList.find({"Email": req['otherParam']}):
-            if (itm.get('Email') == req['otherParam']):
+        for itm in db.favoriteList.find({"Email": email}):
+            if (itm.get('Email') == email):
                 print(itm.get('FavoriteStocks'))
-                return get_data_for_favorites(itm.get('FavoriteStocks'))
+                return favorites_data(itm.get('FavoriteStocks'))
 
 
 @app.route('/fundamental', methods=['POST'])
@@ -233,6 +248,7 @@ def addUser():
             db.users.insert_one(insert)
             return jsonify({'result': "true"})
 
+
 @app.route('/getuser', methods=['GET', 'POST'])
 @cross_origin()
 def getUserData():
@@ -240,41 +256,60 @@ def getUserData():
     if request.method == 'POST':
         print(req['otherParam'])
         for itm in db.favoriteList.find({"Email": req['otherParam']}):
-            if(itm.get('Email') == req['otherParam']):
+            if (itm.get('Email') == req['otherParam']):
                 print(itm.get('FavoriteStocks'))
-                return jsonify({'result': itm.get('FavoriteStocks')}) #TO DO return the stocks list favorit to user
+                return jsonify({'result': itm.get('FavoriteStocks')})  # TO DO return the stocks list favorit to user
 
         print(req['otherParam'])
         insert = {'Email': req['otherParam'], 'FavoriteStocks': []}
         db.favoriteList.insert_one(insert)
         return ("itm.get('_id')")
 
+def get_sector_stocks(sector):
+    sec = "sec_" + sector["name"]
+    filters = ['idx_sp500','exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
+    stock_list = Screener(filters=filters, table='Overview', order='price')  # Get the performance ta
+    # list=[]
+    # for d in stock_list.data:
+    #     list.append(d["Ticker"])
+    # res=get_data_for_favorites(list)
+    # print (res)
+    # Export the screener results to .csv
+    return json.dumps(stock_list.data)
 
 
 
+@app.route('/getSectorStocks', methods=['GET', 'POST'])
+@cross_origin()
+def get_Sector_Data():
+    req = request.get_json()
+    if request.method == 'POST':
+        return get_sector_stocks(req['Sector'])
 
 
 
 def spList():
-        try:
-            f = open("S&P500-Symbols.csv")
-            # Do something with the file
-        except IOError:
-            print("File not accessible")
-            get_sp_list()
-        finally:
-            f.close()
-
+    try:
+        f = open("S&P500-Symbols.csv")
+        # Do something with the file
+    except IOError:
+        print("File not accessible")
+        get_sp_list()
+    finally:
+        f.close()
 
 
 if __name__ == "__main__":
     # app.run(debug=True)
     spList()
-    #get_stock_news()
+    # get_stock_news()
+    # list=["AAPL","TSLA","F"]
+    # favorites_data(list)
     serve(app, host="0.0.0.0", port=5000, threads=6)
-    get_most('Most Active')
-    get_most('Top Gainers')
-    get_most('Top Losers')
+    # get_most('Most Active')
+    # get_most('Top Gainers')
+    # get_most('Top Losers')
+
 
     # app.run(threaded=True)
 
