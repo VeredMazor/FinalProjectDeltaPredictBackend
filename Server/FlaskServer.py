@@ -248,7 +248,6 @@ def getUserData():
         db.favoriteList.insert_one(insert)
         return ("itm.get('_id')")
 
-
 def get_sector_stocks(sector):
     d={}
     sec = "sec_" + sector["name"]
