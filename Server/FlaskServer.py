@@ -10,14 +10,16 @@ import csv
 import json
 import os
 import flask
+from yahooquery import Ticker
 from pymongo import MongoClient, aggregation
 import numpy as np
 import jsonpickle
 import pandas as pd
-
+from yahooquery import Ticker
 # Data Source
 import yfinance as yf
 from finvizfinance.quote import finvizfinance
+from finviz.screener import Screener as stockScreener
 from finvizfinance.screener.overview import Overview
 from flask import Flask, jsonify, Response
 from flask import request
@@ -29,7 +31,7 @@ from pymongo import MongoClient
 # get db
 from waitress import serve
 import sys
-
+from yahooquery import Screener
 
 from Logic.WebCrawling import get_stock_news, get_sp_list
 
@@ -74,15 +76,13 @@ def get_stock_data(symbol):
             reader = csv.reader(f)
             data = list(reader)
             if len(data) != 0:
-                for i in data[1:6]:
-                    ticker = yf.Ticker(i[1])
+                for i in data[1:10]:
+                    ticker = Ticker(i[1])
                     # company_name = ticker.info['longName']
                     # print(company_name)
-                    todays_data = ticker.history(period='1d')
                     x = {
                         "symbol": i[1],
-                        "close": str(round(todays_data['Close'][0], 3)),
-
+                        "close": str(round(ticker.price[i[1]]["regularMarketPrice"], 3))
                     }
                     y = (jsonpickle.encode(x))
                     res.append(y)
@@ -94,23 +94,32 @@ def get_stock_data(symbol):
 
 def get_specific_stock_data(symbol):
     res = {}
-    ticker = yf.Ticker(symbol)
-    todays_data = ticker.history(period='1d')
+    # ticker = yf.Ticker(symbol)
+    # todays_data = ticker.history(period='1d')
     # company_name = ticker.info['longName']
-
+    data = Ticker(symbol)
+    modules = 'assetProfile earnings defaultKeyStatistics'
+    info=data.get_modules(modules)
+    financial=data.summary_detail
     x = {
         # "company": company_name,
         "symbol": symbol,
-        "close": str(round(todays_data['Close'][0], 3)),
-        "high": str(ticker.info['dayHigh']),
-        "volume": str(todays_data['Volume'][0]),
-        "averageVolume": str(ticker.info['averageVolume']),
-        "marketCap": str(ticker.info['marketCap']),
-        "name": str(ticker.info['shortName']),
-        "previousClose": str(ticker.info['previousClose']),
-        "dayLow": str(ticker.info['dayLow']),
-        "logo": str(ticker.info['logo_url'])
-
+        "close": str(round(data.price[symbol]["regularMarketPrice"], 3)),
+        "high": str(data.price[symbol]["regularMarketDayHigh"]),
+        "volume": str(data.price[symbol]['regularMarketVolume']),
+        "averageVolume": str(financial[symbol]['averageVolume']),
+        "marketCap": str(data.price[symbol]['marketCap']),
+        "name": str(data.price[symbol]['longName']),
+        "previousClose": str(data.price[symbol]['regularMarketPreviousClose']),
+        "dayLow": str(data.price[symbol]['regularMarketDayLow']),
+        "info":str(info[symbol]["assetProfile"]["longBusinessSummary"]),
+        "industry":str(info[symbol]["assetProfile"]["industry"]),
+        "change":' {:+.2%}'.format(data.price[symbol]["regularMarketChangePercent"]),
+        "regularMarketChange": ' {:+.2f}'.format(data.price[symbol]["regularMarketChange"], 3),
+        "fiftyTwoWeekLow":str(financial[symbol]['fiftyTwoWeekLow']),
+        "fiftyTwoWeekHigh":str(financial[symbol]['fiftyTwoWeekHigh']),
+        "recommendation":str(data.financial_data[symbol]["recommendationKey"]),
+         #"peRatio":str(data.index_trend[symbol]["PeRatio"])
     }
     y = json.dumps(x)
     # res.append(y)
@@ -130,38 +139,35 @@ def get_data(name):
     return json.dumps(x)
 
 
-def favorites_data(name):
+def favorites_data(ticker_list):
     d = {}
-    ticker = yf.Ticker(name)
-    todays_data = ticker.history(period='1d')
-    stock = finvizfinance(name)
-    x = stock.ticker_fundament()
-    d.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
-    d.update({"dayLow": str(ticker.info['dayLow'])})
-    d.update({"dayHigh": str(ticker.info['dayHigh'])})
-    d.update({"change": str(x['Change'])})
-    d.update({'volume': str(todays_data['Volume'][0])})
-    return json.dumps(d)
+    all_symbols = " ".join(ticker_list)
+    myInfo = Ticker(all_symbols)
+    myDict = myInfo.price
+    x = []
+
+    for ticker in ticker_list:
+        ticker = str(ticker)
+        d.update({'currentPrice': str(myDict[ticker]['regularMarketPrice'])})
+        d.update({"dayLow": str(myDict[ticker]['regularMarketDayLow'])})
+        d.update({"dayHigh": str(myDict[ticker]['regularMarketDayHigh'])})
+        d.update({'volume': str(myDict[ticker]['regularMarketVolume'])})
+        d.update({"symbol":ticker})
+        x.append(json.dumps(d))
+    return json.dumps(x)
 
 
-def get_data_for_favorites(favorites):
-    x = {}
-    for f in favorites:
-        x.update({f: favorites_data(f)})
-    print(x)
-    return x
 
-#gets current data for stocks in favorites screen
+# gets current data for stocks in favorites screen
 @app.route('/favoritesData', methods=['POST'])
 @cross_origin()
 def getFavoriteStocks():
     req = request.get_json()
+    email=req['email']["otherParam"]
     if request.method == 'POST':
-        print(req['otherParam'])
-        for itm in db.favoriteList.find({"Email": req['otherParam']}):
-            if (itm.get('Email') == req['otherParam']):
-                print(itm.get('FavoriteStocks'))
-                return get_data_for_favorites(itm.get('FavoriteStocks'))
+        for itm in db.favoriteList.find({"Email": email}):
+            if (itm.get('Email') == email):
+                return favorites_data(itm.get('FavoriteStocks'))
 
 
 @app.route('/fundamental', methods=['POST'])
@@ -169,7 +175,7 @@ def getFavoriteStocks():
 def getData():
     req = request.get_json()
     if flask.request.method == 'POST':
-        return get_data(req["Symbol"])
+        return get_specific_stock_data(req["Symbol"])
 
 
 @app.route('/activeStockData', methods=['GET'])
@@ -233,6 +239,7 @@ def addUser():
             db.users.insert_one(insert)
             return jsonify({'result': "true"})
 
+
 @app.route('/getuser', methods=['GET', 'POST'])
 @cross_origin()
 def getUserData():
@@ -240,37 +247,48 @@ def getUserData():
     if request.method == 'POST':
         print(req['otherParam'])
         for itm in db.favoriteList.find({"Email": req['otherParam']}):
-            if(itm.get('Email') == req['otherParam']):
+            if (itm.get('Email') == req['otherParam']):
                 print(itm.get('FavoriteStocks'))
-                return jsonify({'result': itm.get('FavoriteStocks')}) #TO DO return the stocks list favorit to user
+                return jsonify({'result': itm.get('FavoriteStocks')})  # TO DO return the stocks list favorit to user
 
         print(req['otherParam'])
         insert = {'Email': req['otherParam'], 'FavoriteStocks': []}
         db.favoriteList.insert_one(insert)
         return ("itm.get('_id')")
 
+def get_sector_stocks(sector):
+    sec = "sec_" + sector["name"]
+    filters = ['idx_sp500','exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
+    stock_list = stockScreener(filters=filters, table='Overview', order='price')  # Get the performance ta
+    return json.dumps(stock_list.data)
 
 
 
+@app.route('/getSectorStocks', methods=['GET', 'POST'])
+@cross_origin()
+def get_Sector_Data():
+    req = request.get_json()
+    if request.method == 'POST':
+        return get_sector_stocks(req['Sector'])
 
 
 
 def spList():
-        try:
-            f = open("S&P500-Symbols.csv")
-            # Do something with the file
-        except IOError:
-            print("File not accessible")
-            get_sp_list()
-        finally:
-            f.close()
-
+    try:
+        f = open("S&P500-Symbols.csv")
+        # Do something with the file
+    except IOError:
+        print("File not accessible")
+        get_sp_list()
+    finally:
+        f.close()
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
+    #app.run(debug=True)
     spList()
-    #get_stock_news()
+    s = Screener()
+    # get_stock_news()
     serve(app, host="0.0.0.0", port=5000, threads=6)
     get_most('Most Active')
     get_most('Top Gainers')
