@@ -285,7 +285,7 @@ def spList():
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
+    #app.run(debug=True)
     spList()
     s = Screener()
     # get_stock_news()
