@@ -1,6 +1,7 @@
 import pandas as pd
 import yfinance as yf
 import datetime
+from datetime import datetime as d
 import pmdarima as pm
 from statsmodels.tsa.arima.model import ARIMA
 from bokeh.plotting import figure, show, output_notebook
@@ -12,131 +13,141 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 import matplotlib.pyplot as plt
+from statsmodels.tsa.stattools import adfuller
+from pmdarima import auto_arima
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.api import SARIMAX, AutoReg
+from statsmodels.tsa.arima.model import ARIMA
+from alpha_vantage.timeseries import TimeSeries
 
 
-def armiaModel():
+
+# If the test statistic of a time series is less than the critical value of a time series,
+# the time series is stationary. If the p-value is less than or equal to 0.05, the time series is also considered stationary.
+
+def adf_test(series, title=''):
+    """
+    Pass in a time series and an optional title, returns an ADF report
+    """
+    print(f'Augmented Dickey-Fuller Test: {title}')
+    result = adfuller(series.dropna(), autolag='AIC')  # .dropna() handles differenced data
+
+    labels = ['ADF test statistic', 'p-value', '# lags used', '# observations']
+    out = pd.Series(result[0:4], index=labels)
+
+    for key, val in result[4].items():
+        out[f'critical value ({key})'] = val
+
+    print(out.to_string())  # .to_string() removes the line "dtype: float64"
+
+    if result[1] <= 0.05:
+        print("Strong evidence against the null hypothesis")
+        print("Reject the null hypothesis")
+        print("Data has no unit root and is stationary")
+    else:
+        print("Weak evidence against the null hypothesis")
+        print("Fail to reject the null hypothesis")
+        print("Data has a unit root and is non-stationary")
+
+
+def weekly_armia_model():
     global arima_fcast
     sns.set()
-    start_training = datetime.date(2010, 1, 1)
-    end_training = datetime.date(2022, 10, 25)
+    start_training = datetime.date(2011, 1, 1)
+    end_training = datetime.datetime.today()
     start_testing = datetime.date(2022, 6, 1)
     end_testing = datetime.datetime.today()
-    ticker = "AAPL"
+    ticker = "TSLA"
     df = yf.download(ticker, start=start_training, end=end_training, progress=False)
     print(df.shape)
     df = df.resample('W').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last',
-                                                 'Adj Close': 'last'})
+                               'Adj Close': 'last'})
     df.drop(columns=["Open", "High", "Low", "Close"], inplace=True)
     df.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
-    # print(df_training.tail())
-    #df=df[["Adj Close"]]
-    train = df.iloc[:-30]
-    test = df.iloc[-30:]
-    print(train.shape, test.shape)
-    print(test.iloc[0], test.iloc[-1])
-    from statsmodels.tsa.statespace.sarimax  import SARIMAX
-    arima = SARIMAX(train["adj_close"], order=(2, 0, 2),enforce_stationarity=True)
-    arima.initialize_stationary()
-    # Fit ARIMA model
-    arima_results = arima.fit()
 
+    adf_test(df)
+
+    # print(auto_arima(df["adj_close"], m=7).summary())
+    #     # Fit ARIMA model
+    arima_model = auto_arima(df["adj_close"], start_p=0, d=1, start_q=0,
+                             max_p=2, max_d=2, max_q=2, start_P=0,
+                             D=1, start_Q=0, max_P=2, max_D=2,
+                             max_Q=2, m=12, seasonal=True,
+                             error_action='warn', trace=True,
+                             supress_warnings=True, stepwise=True,
+                             random_state=20, n_fits=10)
+
+    # Summary of the model
+    arima = ARIMA(df["adj_close"], order=arima_model.order, seasonal_order=arima_model.seasonal_order,
+                  enforce_stationarity="True")
+    print(arima_model.summary())
+    print(pd.DataFrame(arima_model.predict(n_periods=20)))
+    arima_results = arima.fit()
+    print(arima_results.summary())
+    # Obtain predicted values
     # Make ARIMA forecast of next 10 values
-    arima_value_forecast = arima_results.get_forecast(steps=50,information_set="filtered").summary_frame()
-    fig, ax = plt.subplots(figsize=(15, 5))
-    arima_value_forecast['mean'].plot(ax=ax, style='k--')
-    ax.fill_between(arima_value_forecast.index, arima_value_forecast['mean_ci_lower'], arima_value_forecast['mean_ci_upper'], color='k', alpha=0.1);
+    # arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",dynamic=False).summary_frame(alpha=0.1)
+    # Make ARIMA forecast of next 10 values
+    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",
+                                                      typ='levels').summary_frame()
     # Print forecast
     print(arima_value_forecast)
 
-    # df_training = yf.download(ticker, start=start_training, end=end_training, progress=False)
-    # print(f"Downloaded {df_training.shape[0]} rows and {df_training.shape[1]} columns of {ticker} data")
-    # df_training.tail()
-    # ## Resampling to obtain weekly stock prices with the following rules
-    # ## 'Open': first opening price of the month
-    # ## 'High': max price of the month
-    # ## 'Low': min price of the month of the month
-    # ## 'Close' : closing price of the month
-    # ## 'Adj Close' : adjusted closing price of the month
-    #
-    # df_training = df_training.resample('W').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last',
-    #                                              'Adj Close': 'last'})
-    # df_training.drop(columns=["Open", "High", "Low", "Close"], inplace=True)
-    # df_training.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
-    # # print(df_training.tail())
-    # start_training_str = (start_training + pd.Timedelta("5 days")).strftime("%B %Y")
-    # end_training_str = (end_training - pd.Timedelta("5 days")).strftime("%B %Y")
-    # sns.set(font_scale=1.2)
-    # df_training['adj_close'].plot(figsize=(12, 8),
-    #                               title=f"{ticker} weekly adjusted close prices ({start_training_str} - {end_training_str})")
-    # ## Fitting the model(With more tuning of the parameters)
-    # arima_fit = pm.auto_arima(df_training['adj_close'], error_action='raise', suppress_warnings=True, stepwise=True,
-    #                           approximation=False, seasonal=True)
-    #
-    # ## Printing a summary of the model
-    # #print(arima_fit.summary())
-    # df_testing = yf.download(ticker, start=start_testing, end=end_testing, progress=False)
-    # #print(f"Downloaded {df_testing.shape[0]} rows and {df_testing.shape[1]} columns of {ticker} data")
-    # f_testing = df_testing.resample('W').agg(
-    #     {'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Adj Close': 'last'})
-    # df_testing.drop(columns=["Open", "High", "Low", "Close"], inplace=True)
-    # df_testing.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
-    # # print(df_testing.head())
-    #
-    #
-    # n_fcast1 = len(df_testing)
-    # print(arima_fit.predict(n_periods=n_fcast1,alpha=0.05,return_conf_int=True))
-    # show(plot_arima(  df_training['adj_close'],next_25))
-    # arima_fcast = arima_fit.predict(n_periods=n_fcast1, return_conf_int=True, alpha=0.05)
-    # print(arima_fcast)
-    # arima_fcast = [pd.DataFrame(arima_fcast(), columns=['prediction'])]
-    # arima_fcast = pd.concat(arima_fcast, axis=1).set_index(df_testing.index)
-    # arima_fcast.head()
-    # fig, ax = plt.subplots(1, figsize=(12, 8))
-    #
-    # ax = sns.lineplot(data=df_testing['adj_close'], color='black', label='Actual')
-    #
-    # ax.plot(arima_fcast.prediction, color='red', label='ARIMA(3, 1, 2)')
-    #
-    # ax.fill_between(arima_fcast.index, arima_fcast.lower_95,
-    #                 arima_fcast.upper_95, alpha=0.2,
-    #                 facecolor='red')
-    #
-    # ax.set(title=f"{ticker} stock price - actual vs. predicted", xlabel='Date',
-    #        ylabel='Adjusted close price (US$)')
-    # ax.legend(loc='upper left')
-    #
-    # plt.tight_layout()
-    # plt.show()
+    plt.plot(arima_value_forecast, label="Predicted")
+
+def daily_armia_model(symbol):
+    # for daily basis
+    data=[]
+    def parser(x):
+        return d.strptime(x, '%Y-%m-%d-%H-%M-%S')
+    sns.set()
+    start_training = datetime.date(2015, 1, 3)
+    end_training = datetime.datetime.today()
+    start_testing = datetime.date(2022, 6, 1)
+    end_testing = datetime.datetime.today()
+    ticker = symbol
+    df = yf.download(ticker, start=start_training, end=end_training, progress=False)
+    df = df.reset_index()
+    df['Price'] = df['Close']
+    Quantity_date = df[['Price', 'Date']]
+    Quantity_date.index = Quantity_date['Date'].map(lambda x: x)
+    pd.set_option('mode.chained_assignment', None)
+    Quantity_date['Price'] = Quantity_date['Price'].map(lambda x: float(x))
+    Quantity_date = Quantity_date.fillna(Quantity_date.bfill())
+    # Quantity_date.index = pd.DatetimeIndex(Quantity_date["Date"])
+    Quantity_date = Quantity_date.drop(['Date'], axis=1)
+    quantity = Quantity_date.values
+    #quantity.index=pd.DatetimeIndex(quantity["Date"])
+    # df.set_index(df["Open"], drop=True, append=False, inplace=False, verify_integrity=False)
+    # df.drop(columns=["Open", "High", "Low", "Close","Volume"], inplace=True)
+    # df.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
+
+    arima_model = auto_arima(quantity, start_p=0, d=1, start_q=0,
+                             max_p=2, max_d=2, max_q=2, start_P=0,
+                             D=1, start_Q=0, max_P=2, max_D=2,
+                             max_Q=2, m=12, seasonal=True,
+                             error_action='warn', trace=True,
+                             supress_warnings=True, stepwise=True,
+                             random_state=20, n_fits=20)
+
+    #get best model orders
+    print(arima_model.summary().tables[0][1][1])
+    arima = ARIMA(quantity, order= arima_model.order, seasonal_order=arima_model.seasonal_order , enforce_stationarity="True")
+    # Fit ARIMA model
+    arima_results = arima.fit()
+    print(arima_results.forecast())
+    # Obtain predicted values
+    # Make ARIMA forecast of next x steps
+    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered", typ='levels').summary_frame()
+    # Print forecast
+    #print(arima_value_forecast)
+    #plt.plot(arima_value_forecast["mean"], label="Predicted")
+    arima_value_forecast.drop(columns=["mean_se", "mean_ci_lower", "mean_ci_upper"], inplace=True)
+    # Convert the DataFrame to dict
+    dictionaryObject = arima_value_forecast.to_dict();
+    return (dictionaryObject)
 
 
-def plot_arima(truth, forecasts, title="ARIMA", xaxis_label='Time',
-               yaxis_label='Value', c1='#A6CEE3', c2='#B2DF8A',
-               forecast_start=None, **kwargs):
-    # make truth and forecasts into pandas series
-    n_truth = truth.shape[0]
-    n_forecasts = forecasts.shape[0]
-
-    # always plot truth the same
-    truth = pd.Series(truth, index=np.arange(truth.shape[0]))
-
-    # if no defined forecast start, start at the end
-    if forecast_start is None:
-        idx = np.arange(n_truth, n_truth + n_forecasts)
-    else:
-        idx = np.arange(forecast_start, n_forecasts)
-    forecasts = pd.Series(forecasts, index=idx)
-
-    # set up the plot
-    p = figure(title=title, plot_height=400, **kwargs)
-    p.grid.grid_line_alpha = 0.3
-    p.xaxis.axis_label = xaxis_label
-    p.yaxis.axis_label = yaxis_label
-
-    # add the lines
-    p.line(truth.index, truth.values, color=c1, legend_label='Observed')
-    p.line(forecasts.index, forecasts.values, color=c2, legend_label='Forecasted')
-
-    return p
 
 def monte_carlo():
     start = dt.datetime(2011, 1, 1)
@@ -193,8 +204,13 @@ def monte_carlo():
     print("Quantile (5%): ", np.percentile(last_price_list, 5))
     print("Quantile (95%): ", np.percentile(last_price_list, 95))
 
+
 if __name__ == "__main__":
-    armiaModel()
+    daily_armia_model("A")
+    #get_historical("AAPL")
+    quote="AAPL"
+    # ************** PREPROCESSUNG ***********************
 
 
+    #weekly_armia_model()
 
