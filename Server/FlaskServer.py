@@ -34,6 +34,7 @@ import sys
 from yahooquery import Screener
 
 from Logic.WebCrawling import get_stock_news, get_sp_list
+from Logic.TechnicalAnalyzerAlgorithms import  daily_armia_model
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 
@@ -183,6 +184,14 @@ def getData():
 def getMostActive():
     if flask.request.method == 'GET':
         return get_stock_data('Most Active.csv')
+
+
+@app.route('/arimaResults', methods=['POST'])
+@cross_origin()
+def getArimaARes():
+    req = request.get_json()
+    if flask.request.method == 'POST':
+        return daily_armia_model(req["Symbol"])
 
 
 @app.route('/spesificStock', methods=['POST'])
