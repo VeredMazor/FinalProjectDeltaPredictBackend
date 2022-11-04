@@ -298,7 +298,7 @@ if __name__ == "__main__":
     spList()
     s = Screener()
     # get_stock_news()
-    serve(app, host="0.0.0.0", port=5000, threads=6)
+    serve(app, host="0.0.0.0", port=5000, threads=90)
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
