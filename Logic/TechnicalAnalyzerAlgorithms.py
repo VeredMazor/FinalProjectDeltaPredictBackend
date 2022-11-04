@@ -206,8 +206,8 @@ def monte_carlo():
 
 
 if __name__ == "__main__":
-    daily_armia_model("A")
-    #get_historical("AAPL")
+    # daily_armia_model("A")
+    # #get_historical("AAPL")
     quote="AAPL"
     # ************** PREPROCESSUNG ***********************
 
