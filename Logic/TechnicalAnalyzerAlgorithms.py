@@ -53,6 +53,7 @@ def adf_test(series, title=''):
 
 def weekly_armia_model(symbol):
     sns.set()
+    #get data of stock
     start_training = datetime.date(2015, 1, 1)
     end_training = datetime.datetime.today()
     start_testing = datetime.date(2022, 6, 1)

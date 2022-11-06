@@ -192,6 +192,8 @@ def getArimaARes():
     result={}
     req = request.get_json()
     if flask.request.method == 'POST':
+        #get weekly and daily arima prediction result
+
         result["weekly"]=weekly_armia_model(req["Symbol"])
         result["daily"] = daily_armia_model(req["Symbol"])
         return result
