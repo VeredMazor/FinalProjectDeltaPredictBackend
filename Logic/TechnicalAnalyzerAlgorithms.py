@@ -12,13 +12,14 @@ import yfinance as yf
 import pandas as pd
 import datetime as dt
 import numpy as np
+import json
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
 from pmdarima import auto_arima
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.api import SARIMAX, AutoReg
 from statsmodels.tsa.arima.model import ARIMA
-from alpha_vantage.timeseries import TimeSeries
+
 
 
 
@@ -50,25 +51,21 @@ def adf_test(series, title=''):
         print("Data has a unit root and is non-stationary")
 
 
-def weekly_armia_model():
-    global arima_fcast
+def weekly_armia_model(symbol):
     sns.set()
-    start_training = datetime.date(2011, 1, 1)
+    #get data of stock
+    start_training = datetime.date(2015, 1, 1)
     end_training = datetime.datetime.today()
     start_testing = datetime.date(2022, 6, 1)
     end_testing = datetime.datetime.today()
-    ticker = "TSLA"
+    ticker = symbol
     df = yf.download(ticker, start=start_training, end=end_training, progress=False)
     print(df.shape)
     df = df.resample('W').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last',
                                'Adj Close': 'last'})
     df.drop(columns=["Open", "High", "Low", "Close"], inplace=True)
     df.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
-
-    adf_test(df)
-
     # print(auto_arima(df["adj_close"], m=7).summary())
-    #     # Fit ARIMA model
     arima_model = auto_arima(df["adj_close"], start_p=0, d=1, start_q=0,
                              max_p=2, max_d=2, max_q=2, start_P=0,
                              D=1, start_Q=0, max_P=2, max_D=2,
@@ -83,17 +80,16 @@ def weekly_armia_model():
     print(arima_model.summary())
     print(pd.DataFrame(arima_model.predict(n_periods=20)))
     arima_results = arima.fit()
-    print(arima_results.summary())
+    #print(arima_results.summary())
     # Obtain predicted values
     # Make ARIMA forecast of next 10 values
-    # arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",dynamic=False).summary_frame(alpha=0.1)
-    # Make ARIMA forecast of next 10 values
-    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",
-                                                      typ='levels').summary_frame()
-    # Print forecast
-    print(arima_value_forecast)
-
-    plt.plot(arima_value_forecast, label="Predicted")
+    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",typ='levels').summary_frame()
+    arima_value_forecast["dates"] = arima_value_forecast.index.date
+    res={}
+    res["dates"]= arima_value_forecast["dates"].values.astype("str").tolist()
+    res["mean"]=arima_value_forecast["mean"].values.astype("str").tolist()
+    return (res)
+    #plt.plot(arima_value_forecast, label="Predicted")
 
 def daily_armia_model(symbol):
     # for daily basis
@@ -207,10 +203,6 @@ def monte_carlo():
 
 if __name__ == "__main__":
     # daily_armia_model("A")
-    # #get_historical("AAPL")
-    quote="AAPL"
+    print("A")
     # ************** PREPROCESSUNG ***********************
-
-
-    #weekly_armia_model()
-
+    weekly_armia_model("F")

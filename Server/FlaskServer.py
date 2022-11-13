@@ -164,12 +164,28 @@ def favorites_data(ticker_list):
 @cross_origin()
 def getFavoriteStocks():
     req = request.get_json()
-    email=req['email']["otherParam"]
+    email=req['email']["userParam"]
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):
             if (itm.get('Email') == email):
                 return favorites_data(itm.get('FavoriteStocks'))
 
+@app.route('/addStocktoFavoriteList', methods=['POST'])
+@cross_origin()
+def addStockToFavoriteStocks():
+    req = request.get_json()
+    print(req)
+    email = req['Email']["userParam"]
+    symbol = req['Symbol']
+    if request.method == 'POST':
+        for itm in db.favoriteList.find({"Email": email}):
+            if symbol in itm['FavoriteStocks']:
+                print("true")
+                return jsonify({'result': "true"})
+            else:
+                print("false")
+                db.favoriteList.update_one({'Email': email},{'$push': {'FavoriteStocks': symbol}})
+                return jsonify({'result': "false"})
 
 @app.route('/fundamental', methods=['POST'])
 @cross_origin()
@@ -303,7 +319,7 @@ if __name__ == "__main__":
     spList()
     s = Screener()
     # get_stock_news()
-    serve(app, host="0.0.0.0", port=5000,threads=20)
+    serve(app, host="0.0.0.0", port=5000,threads=30)
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
