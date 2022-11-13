@@ -19,7 +19,7 @@ from pmdarima import auto_arima
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.api import SARIMAX, AutoReg
 from statsmodels.tsa.arima.model import ARIMA
-from alpha_vantage.timeseries import TimeSeries
+
 
 
 
@@ -206,4 +206,3 @@ if __name__ == "__main__":
     print("A")
     # ************** PREPROCESSUNG ***********************
     weekly_armia_model("F")
-
