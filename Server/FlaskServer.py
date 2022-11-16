@@ -34,6 +34,7 @@ import sys
 from yahooquery import Screener
 
 from Logic.WebCrawling import get_stock_news, get_sp_list
+from Logic.SentimentAnlysis import get_sentiment_of_stock
 from Logic.TechnicalAnalyzerAlgorithms import  daily_armia_model,weekly_armia_model
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
@@ -67,6 +68,7 @@ def get_most(signal):
         df.to_csv(signal + '.csv', columns=['Ticker'], mode='w')
     except:
         return
+
 
 
 def get_stock_data(symbol):
@@ -201,6 +203,13 @@ def getMostActive():
     if flask.request.method == 'GET':
         return get_stock_data('Most Active.csv')
 
+# gets sentiment score of a specific stock
+@app.route('/sentimentScore', methods=['POST'])
+@cross_origin()
+def get_sentiment_score():
+    req = request.get_json()
+    if request.method == 'POST':
+        return jsonify(get_sentiment_of_stock(req['symbol']))
 
 @app.route('/arimaResults', methods=['POST'])
 @cross_origin()
@@ -209,7 +218,7 @@ def getArimaARes():
     req = request.get_json()
     if flask.request.method == 'POST':
         #get weekly and daily arima prediction result
-
+        print(req)
         result["weekly"]=weekly_armia_model(req["Symbol"])
         result["daily"] = daily_armia_model(req["Symbol"])
         return result
@@ -317,8 +326,8 @@ def spList():
 if __name__ == "__main__":
     #app.run(debug=True)
     spList()
-    s = Screener()
-    # get_stock_news()
+    if len(os.listdir("../Logic/newsHeadlines/")) == 0:
+     get_stock_news()
     serve(app, host="0.0.0.0", port=5000,threads=30)
     get_most('Most Active')
     get_most('Top Gainers')

@@ -12,27 +12,32 @@ import pandas as pd
 from urllib.request import urlopen, Request
 from datetime import date as date1
 import traceback
+import csv
 
 # importing datetime module
 from datetime import *
-
+import dateutil.relativedelta as relativedelta
+from datetime import date
 from Logic.SentimentAnlysis import sentiment_on_all_files
 
 
 def get_stock_news():
+
     finwiz_url = 'https://finviz.com/quote.ashx?t='
     news_tables = {}
-    import csv
     tickers = []
-    with open('S&P500-Symbols.csv', newline='') as f:
+    # get current time
+    d = datetime.now()
+    # create ticker list from top 50 s&p stocks
+    with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
         if len(data) != 0:
             for i in data[1:]:
-                tickers.append(i[1])
+                tickers.append(i[0])
     try:
-        # scrape stock news for S&P500 List
-        for ticker in tickers[:150]:
+        # scrape stock news for top 50 S&P500 List
+        for ticker in tickers[:50]:
             url = finwiz_url + ticker
             req = Request(url=url, headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0'})
@@ -50,7 +55,7 @@ def get_stock_news():
 
         text_list = []
         # Read one single day of headlines for ‘’
-        for t in tickers[:150]:
+        for t in tickers[:50]:
             stock = news_tables[t]
             try:
                 # Get all the table rows tagged in HTML with <tr> into ‘stock_tr’
@@ -63,9 +68,13 @@ def get_stock_news():
                     td_text = table_row.td.text
                     dict["ticker"] = t
                     currentMonth = datetime.now().month
-                    if "Oct" in td_text:
+                    prevMonth=(datetime.now() + relativedelta.relativedelta(months=-1)).strftime("%b")
+                    last_month = d.strftime("%b")
+                    if prevMonth not in td_text:
                         dict["date"] = td_text
                         text_list.append(a_text)
+                    else: break
+
 
                 dict["text"] = text_list
                 df = pd.DataFrame(dict)
@@ -76,6 +85,7 @@ def get_stock_news():
     except  Exception:
         traceback.print_exc()
     sentiment_on_all_files()
+
 
 
 def get_sp_list():
