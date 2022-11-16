@@ -1,3 +1,4 @@
+
 import csv
 
 import nltk
@@ -78,4 +79,3 @@ def sentiment_on_all_files():
 if __name__ == "__main__":
     dict = {}
     sentiment_on_all_files()
-
