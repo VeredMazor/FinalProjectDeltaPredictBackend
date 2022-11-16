@@ -217,7 +217,7 @@ def getMostActive():
     if flask.request.method == 'GET':
         return get_stock_data('Most Active.csv')
 
-# gets sentiment score of a specific stock
+# gets sentiment score of a specific stock from top 50 stocks
 @app.route('/sentimentScore', methods=['POST'])
 @cross_origin()
 def get_sentiment_score():

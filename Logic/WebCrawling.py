@@ -70,6 +70,7 @@ def get_stock_news():
                     currentMonth = datetime.now().month
                     prevMonth=(datetime.now() + relativedelta.relativedelta(months=-1)).strftime("%b")
                     last_month = d.strftime("%b")
+                    #get all data of this month
                     if prevMonth not in td_text:
                         dict["date"] = td_text
                         text_list.append(a_text)
