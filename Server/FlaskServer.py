@@ -10,7 +10,6 @@ import csv
 import json
 import os
 import flask
-from yahooquery import Ticker
 from pymongo import MongoClient, aggregation
 import numpy as np
 import jsonpickle
@@ -148,17 +147,18 @@ def favorites_data(ticker_list):
     myInfo = Ticker(all_symbols)
     myDict = myInfo.price
     x = []
-
-    for ticker in ticker_list:
-        ticker = str(ticker)
-        d.update({'currentPrice': str(myDict[ticker]['regularMarketPrice'])})
-        d.update({"dayLow": str(myDict[ticker]['regularMarketDayLow'])})
-        d.update({"dayHigh": str(myDict[ticker]['regularMarketDayHigh'])})
-        d.update({'volume': str(myDict[ticker]['regularMarketVolume'])})
-        d.update({"symbol":ticker})
-        x.append(json.dumps(d))
+    try:
+        for ticker in ticker_list:
+            ticker = str(ticker)
+            d.update({"currentPrice": str(myDict[ticker]["regularMarketPrice"])})
+            d.update({"dayLow": str(myDict[ticker]["regularMarketDayLow"])})
+            d.update({"dayHigh": str(myDict[ticker]["regularMarketDayHigh"])})
+            d.update({"volume": str(myDict[ticker]["regularMarketVolume"])})
+            d.update({"symbol": ticker})
+            x.append(json.dumps(d))
+    except:
+        pass
     return json.dumps(x)
-
 
 
 # gets current data for stocks in favorites screen
@@ -188,6 +188,20 @@ def addStockToFavoriteStocks():
                 print("false")
                 db.favoriteList.update_one({'Email': email},{'$push': {'FavoriteStocks': symbol}})
                 return jsonify({'result': "false"})
+
+
+@app.route('/deletStocktoFavoriteList', methods=['POST'])
+@cross_origin()
+def deletStockToFavoriteStocks():
+    req = request.get_json()
+    print(req)
+    email = req['Email']["userParam"]
+    symbol = req['Symbol']
+    if request.method == 'POST':
+        print("true")
+        db.favoriteList.update_one({'Email': email},{'$pull': {'FavoriteStocks': symbol}})
+        return jsonify({'result': "true"})
+
 
 @app.route('/fundamental', methods=['POST'])
 @cross_origin()
