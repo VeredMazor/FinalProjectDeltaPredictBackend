@@ -19,7 +19,8 @@ from pmdarima import auto_arima
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from statsmodels.tsa.api import SARIMAX, AutoReg
 from statsmodels.tsa.arima.model import ARIMA
-
+from scipy.stats import norm
+from pandas_datareader import data as dr
 
 
 
@@ -145,61 +146,47 @@ def daily_armia_model(symbol):
 
 
 
-def monte_carlo():
-    start = dt.datetime(2011, 1, 1)
-    end = dt.datetime(2021, 1, 1)
-    stock_data = yf.download('MSFT', start, end)
-    returns = stock_data['Adj Close'].pct_change()
-    daily_vol = returns.std()
+def monte_carlo(Symbol):
+    #ticker = 'NVDA'  # GOOGLE stock ticker
+    data = pd.DataFrame(columns=[Symbol])
+    data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end='2022-03-23')['Adj Close']
+    print(data.head())
 
-    T = 252
-    count = 0
-    price_list = []
-    last_price = stock_data['Adj Close'][-1]
+    returns = data.pct_change()
+    returns.dropna(inplace=True)
+    print(returns.head())
 
-    price = last_price * (1 + np.random.normal(0, daily_vol))
-    price_list.append(price)
+    l = norm.ppf(0.10)
+    u = norm.ppf(0.85)
 
-    for y in range(T):
-        if count == 251:
-            break
-        price = price_list[count] * (1 + np.random.normal(0, daily_vol))
-        price_list.append(price)
-        count += 1
+    mean = returns.mean()
+    stdev = returns.std()
+    np.random.seed(42)
+    n = np.random.normal(size=(30, 10))
+    rows = n.shape[0]
+    cols = n.shape[1]
+    for i in range(0, rows):
+        for j in range(0, cols):
+            if n[i][j] > u:
+                n[i][j] = u  # sets upper limit
+            elif n[i][j] < l:
+                n[i][j] = l  # sets lower limit
+            else:
+                n[i][j] = n[i][j]
+            n[i][j] = (stdev * n[i][j]) + mean
+    s = data.iloc[-1]
+    pred = np.zeros_like(n) + 1
+    pred[0] = s  # sets beginning point of simulations
+    for i in range(1, 30):
+        pred[i] = pred[(i - 1)] * (1 + n[(i - 1)])
 
-    plt.plot(price_list)
-    plt.show()
-
-    NUM_SIMULATIONS = 1000
-    df = pd.DataFrame()
-    last_price_list = []
-    for x in range(NUM_SIMULATIONS):
-        count = 0
-        price_list = []
-        price = last_price * (1 + np.random.normal(0, daily_vol))
-        price_list.append(price)
-
-        for y in range(T):
-            if count == 251:
-                break
-            price = price_list[count] * (1 + np.random.normal(0, daily_vol))
-            price_list.append(price)
-            count += 1
-
-        df[x] = price_list
-        last_price_list.append(price_list[-1])
-
-    fig = plt.figure()
-    fig.suptitle("Monte Carlo Simulation: MSFT")
-    plt.plot(df)
-    plt.xlabel('Day')
-    plt.ylabel('Price')
-    plt.show()
-
-    print("Expected price: ", round(np.mean(last_price_list), 2))
-    print("Quantile (5%): ", np.percentile(last_price_list, 5))
-    print("Quantile (95%): ", np.percentile(last_price_list, 95))
-
+    # print('\n')
+    # print('Maximum Simulated Price : {}'.format(np.max(pred)))
+    # print('Minimum Simulated Price : {}'.format(np.min(pred)))
+    # for j in range(0, cols):
+    #     print('Simulated Close Prices after 30 days : {}'.format(pred[-1][j]))
+    result = {"Max":np.max(pred),"Min":np.min(pred)}
+    return result
 
 if __name__ == "__main__":
     # daily_armia_model("A")
