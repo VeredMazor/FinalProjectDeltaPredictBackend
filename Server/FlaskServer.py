@@ -34,13 +34,12 @@ from yahooquery import Screener
 
 from Logic.WebCrawling import get_stock_news, get_sp_list
 from Logic.SentimentAnlysis import get_sentiment_of_stock
-from Logic.TechnicalAnalyzerAlgorithms import  daily_armia_model,weekly_armia_model
+from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 
 
-cluster = MongoClient(
-    "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+cluster = MongoClient("mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
 app = Flask(__name__)
 CORS(app)
 db = cluster["DeltaPredictDB"]
@@ -166,7 +165,7 @@ def favorites_data(ticker_list):
 @cross_origin()
 def getFavoriteStocks():
     req = request.get_json()
-    email=req['email']["userParam"]
+    email=req['email']["otherParam"]
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):
             if (itm.get('Email') == email):
@@ -176,7 +175,6 @@ def getFavoriteStocks():
 @cross_origin()
 def addStockToFavoriteStocks():
     req = request.get_json()
-    print(req)
     email = req['Email']["userParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
@@ -194,8 +192,7 @@ def addStockToFavoriteStocks():
 @cross_origin()
 def deletStockToFavoriteStocks():
     req = request.get_json()
-    print(req)
-    email = req['Email']["userParam"]
+    email = req['Email']["otherParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
         print("true")
@@ -224,6 +221,21 @@ def get_sentiment_score():
     req = request.get_json()
     if request.method == 'POST':
         return jsonify(get_sentiment_of_stock(req['symbol']))
+
+@app.route('/monteCarloResults', methods=['POST'])
+@cross_origin()
+def getMonteCarlo():
+    result={}
+    req = request.get_json()
+    print(req)
+    if request.method == 'POST':
+        result = monte_carlo(req["Symbol"])
+        print(result)
+        return result
+        #result["weekly"]=weekly_armia_model(req["Symbol"])
+        #result["daily"] = daily_armia_model(req["Symbol"])
+
+
 
 @app.route('/arimaResults', methods=['POST'])
 @cross_origin()
@@ -340,8 +352,8 @@ def spList():
 if __name__ == "__main__":
     #app.run(debug=True)
     spList()
-    if len(os.listdir("../Logic/newsHeadlines/")) == 0:
-     get_stock_news()
+    #if len(os.listdir("../Logic/newsHeadlines/")) == 0:
+     #get_stock_news()
     serve(app, host="0.0.0.0", port=5000,threads=30)
     get_most('Most Active')
     get_most('Top Gainers')
