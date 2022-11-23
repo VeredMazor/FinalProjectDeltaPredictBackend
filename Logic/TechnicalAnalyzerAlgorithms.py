@@ -12,6 +12,7 @@ import yfinance as yf
 import pandas as pd
 import datetime as dt
 import numpy as np
+import csv
 import json
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
@@ -187,9 +188,31 @@ def monte_carlo(Symbol):
     #     print('Simulated Close Prices after 30 days : {}'.format(pred[-1][j]))
     result = {"Max":np.max(pred),"Min":np.min(pred)}
     return result
+def arima_on_all():
+    results={}
+    tickers=[]
+    from datetime import datetime
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    with open('top50.csv', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        if len(data) != 0:
+            for i in data[1:]:
+                tickers.append(i[0])
+        # scrape stock news for top 50 S&P500 List
+        for ticker in tickers:
+            results.update({'symbol': ticker, 'result': monte_carlo(ticker)})
+    print(datetime.date)
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    return result
+
 
 if __name__ == "__main__":
     # daily_armia_model("A")
     print("A")
+    print(arima_on_all())
     # ************** PREPROCESSUNG ***********************
-    weekly_armia_model("F")
