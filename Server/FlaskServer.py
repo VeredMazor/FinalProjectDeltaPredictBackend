@@ -38,26 +38,16 @@ from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_mo
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 
-
-cluster = MongoClient("mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+# create mongoDB refernce andt start flask app
+cluster = MongoClient(
+    "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
 app = Flask(__name__)
 CORS(app)
 db = cluster["DeltaPredictDB"]
 
 
-@app.route("/")
-def get_time():
-    # Returning an api for showing in  reactjs
-    return {
-        'Name': "geek",
-        "Age": "22",
-        "Date": "x",
-        "programming": "python"
-    }
-
-
+# get most active list from API
 def get_most(signal):
-    # get most active
     foverview = Overview()
     filters_dict = {'Index': 'S&P 500', 'Sector': 'Any'}
     foverview.set_filter(signal=signal, filters_dict=filters_dict)
@@ -68,42 +58,37 @@ def get_most(signal):
         return
 
 
-
+# get financial stock data
 def get_stock_data(symbol):
     res = []
     result_list = []
     try:
+        # read the  stock symbols from file a list
         with open(symbol, newline='') as f:
             reader = csv.reader(f)
             data = list(reader)
             if len(data) != 0:
                 for i in data[1:10]:
                     ticker = Ticker(i[1])
-                    # company_name = ticker.info['longName']
-                    # print(company_name)
                     x = {
                         "symbol": i[1],
                         "close": str(round(ticker.price[i[1]]["regularMarketPrice"], 3))
                     }
                     y = (jsonpickle.encode(x))
                     res.append(y)
-
     except:
         return res
     return res
 
-
+#get finacial data of a specific stock from the API
 def get_specific_stock_data(symbol):
     res = {}
-    # ticker = yf.Ticker(symbol)
-    # todays_data = ticker.history(period='1d')
-    # company_name = ticker.info['longName']
+    #get the API module
     data = Ticker(symbol)
     modules = 'assetProfile earnings defaultKeyStatistics'
-    info=data.get_modules(modules)
-    financial=data.summary_detail
+    info = data.get_modules(modules)
+    financial = data.summary_detail
     x = {
-        # "company": company_name,
         "symbol": symbol,
         "close": str(round(data.price[symbol]["regularMarketPrice"], 3)),
         "high": str(data.price[symbol]["regularMarketDayHigh"]),
@@ -113,33 +98,18 @@ def get_specific_stock_data(symbol):
         "name": str(data.price[symbol]['longName']),
         "previousClose": str(data.price[symbol]['regularMarketPreviousClose']),
         "dayLow": str(data.price[symbol]['regularMarketDayLow']),
-        "info":str(info[symbol]["assetProfile"]["longBusinessSummary"]),
-        "industry":str(info[symbol]["assetProfile"]["industry"]),
-        "change":' {:+.2%}'.format(data.price[symbol]["regularMarketChangePercent"]),
+        "info": str(info[symbol]["assetProfile"]["longBusinessSummary"]),
+        "industry": str(info[symbol]["assetProfile"]["industry"]),
+        "change": ' {:+.2%}'.format(data.price[symbol]["regularMarketChangePercent"]),
         "regularMarketChange": ' {:+.2f}'.format(data.price[symbol]["regularMarketChange"], 3),
-        "fiftyTwoWeekLow":str(financial[symbol]['fiftyTwoWeekLow']),
-        "fiftyTwoWeekHigh":str(financial[symbol]['fiftyTwoWeekHigh']),
-        "recommendation":str(data.financial_data[symbol]["recommendationKey"]),
-         #"peRatio":str(data.index_trend[symbol]["PeRatio"])
+        "fiftyTwoWeekLow": str(financial[symbol]['fiftyTwoWeekLow']),
+        "fiftyTwoWeekHigh": str(financial[symbol]['fiftyTwoWeekHigh']),
+        "recommendation": str(data.financial_data[symbol]["recommendationKey"]),
     }
     y = json.dumps(x)
-    # res.append(y)
     return y
 
-
-def get_data(name):
-    ticker = yf.Ticker(name)
-    todays_data = ticker.history(period='1d')
-    stock = finvizfinance(name)
-    stock_description = stock.ticker_description()
-    x = stock.ticker_fundament()
-    x.update({'info': stock_description})
-    x.update({'currentPrice': str(round(todays_data['Close'][0], 3))})
-    x.update({'volume': str(todays_data['Volume'][0])})
-    # x.update({ "logo": str(ticker.info['logo_url'])})
-    return json.dumps(x)
-
-
+#get stock data according to favorite stocks list
 def favorites_data(ticker_list):
     d = {}
     all_symbols = " ".join(ticker_list)
@@ -165,12 +135,13 @@ def favorites_data(ticker_list):
 @cross_origin()
 def getFavoriteStocks():
     req = request.get_json()
-    email=req['email']["otherParam"]
+    email = req['email']["otherParam"]
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):
             if (itm.get('Email') == email):
                 return favorites_data(itm.get('FavoriteStocks'))
 
+#add stock selected by user to the favoirte list in DB
 @app.route('/addStocktoFavoriteList', methods=['POST'])
 @cross_origin()
 def addStockToFavoriteStocks():
@@ -184,10 +155,10 @@ def addStockToFavoriteStocks():
                 return jsonify({'result': "true"})
             else:
                 print("false")
-                db.favoriteList.update_one({'Email': email},{'$push': {'FavoriteStocks': symbol}})
+                db.favoriteList.update_one({'Email': email}, {'$push': {'FavoriteStocks': symbol}})
                 return jsonify({'result': "false"})
 
-
+#delete stock selected by user from the favoirte list in DB
 @app.route('/deletStocktoFavoriteList', methods=['POST'])
 @cross_origin()
 def deletStockToFavoriteStocks():
@@ -196,7 +167,7 @@ def deletStockToFavoriteStocks():
     symbol = req['Symbol']
     if request.method == 'POST':
         print("true")
-        db.favoriteList.update_one({'Email': email},{'$pull': {'FavoriteStocks': symbol}})
+        db.favoriteList.update_one({'Email': email}, {'$pull': {'FavoriteStocks': symbol}})
         return jsonify({'result': "true"})
 
 
@@ -207,12 +178,13 @@ def getData():
     if flask.request.method == 'POST':
         return get_specific_stock_data(req["Symbol"])
 
-
+#return most active stock financial data
 @app.route('/activeStockData', methods=['GET'])
 @cross_origin()
 def getMostActive():
     if flask.request.method == 'GET':
         return get_stock_data('Most Active.csv')
+
 
 # gets sentiment score of a specific stock from top 50 stocks
 @app.route('/sentimentScore', methods=['POST'])
@@ -222,30 +194,28 @@ def get_sentiment_score():
     if request.method == 'POST':
         return jsonify(get_sentiment_of_stock(req['symbol']))
 
+# get results of monte carlo prediction algoirthm and send to client
 @app.route('/monteCarloResults', methods=['POST'])
 @cross_origin()
 def getMonteCarlo():
-    result={}
+    result = {}
     req = request.get_json()
     print(req)
     if request.method == 'POST':
         result = monte_carlo(req["Symbol"])
         print(result)
         return result
-        #result["weekly"]=weekly_armia_model(req["Symbol"])
-        #result["daily"] = daily_armia_model(req["Symbol"])
 
-
-
+# get results of ARIMA model prediction algorithm and send to client
 @app.route('/arimaResults', methods=['POST'])
 @cross_origin()
 def getArimaARes():
-    result={}
+    result = {}
     req = request.get_json()
     if flask.request.method == 'POST':
-        #get weekly and daily arima prediction result
+        # get weekly and daily arima prediction result
         print(req)
-        result["weekly"]=weekly_armia_model(req["Symbol"])
+        result["weekly"] = weekly_armia_model(req["Symbol"])
         result["daily"] = daily_armia_model(req["Symbol"])
         return result
 
@@ -271,7 +241,7 @@ def get_top_gainers():
     if flask.request.method == 'GET':
         return get_stock_data('Top Gainers.csv')
 
-
+#this function checks if user login details are correct in MONGO DB
 @app.route('/authenticate', methods=['GET', 'POST'])
 @cross_origin()
 def check():
@@ -281,16 +251,14 @@ def check():
         if db.users.count_documents({'Email': req["name"], 'Password': req["Password"]}, limit=1) != 0:
             return jsonify({'result': "true"})
         return jsonify({'result': "false"})
-        # insert to DB
-        # insert = {'userName': req["name"], 'Password': req["Password"]}
-        # db.users.insert_one(insert)
+
 
 
     elif request.method == 'GET':
         json_string = "{'a': 1, 'b': 2}"
         return Response(json_string, mimetype='application/json')
 
-
+#this function signs up new user and updates the DB
 @app.route('/signnup', methods=['GET', 'POST'])
 @cross_origin()
 def addUser():
@@ -321,21 +289,21 @@ def getUserData():
         db.favoriteList.insert_one(insert)
         return ("itm.get('_id')")
 
+
+#get data for stocks in a specific sector (for ex. ENERGY)
 def get_sector_stocks(sector):
     sec = "sec_" + sector["name"]
-    filters = ['idx_sp500','exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
+    filters = ['idx_sp500', 'exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
     stock_list = stockScreener(filters=filters, table='Overview', order='price')  # Get the performance ta
     return json.dumps(stock_list.data)
 
-
-
+#get data for stocks in a specific sector (for ex. ENERGY)
 @app.route('/getSectorStocks', methods=['GET', 'POST'])
 @cross_origin()
 def get_Sector_Data():
     req = request.get_json()
     if request.method == 'POST':
         return get_sector_stocks(req['Sector'])
-
 
 
 def spList():
@@ -350,11 +318,13 @@ def spList():
 
 
 if __name__ == "__main__":
-    #app.run(debug=True)
+    # app.run(debug=True)
     spList()
-    #if len(os.listdir("../Logic/newsHeadlines/")) == 0:
-     #get_stock_news()
-    serve(app, host="0.0.0.0", port=5000,threads=30)
+    if len(os.listdir("../Logic/newsHeadlines/")) == 0:
+     get_stock_news()
+    #activate FLASK server
+    serve(app, host="0.0.0.0", port=5000, threads=30)
+    #create lists of active/gainers/losers stocks
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
