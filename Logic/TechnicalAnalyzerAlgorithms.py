@@ -150,11 +150,11 @@ def monte_carlo(Symbol):
     #ticker = 'NVDA'  # GOOGLE stock ticker
     data = pd.DataFrame(columns=[Symbol])
     data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end='2022-03-23')['Adj Close']
-    print(data.head())
+    #print(data.head())
 
     returns = data.pct_change()
     returns.dropna(inplace=True)
-    print(returns.head())
+    #print(returns.head())
 
     l = norm.ppf(0.10)
     u = norm.ppf(0.85)
