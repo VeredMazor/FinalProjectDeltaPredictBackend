@@ -208,6 +208,30 @@ def arima_on_all():
     return stocks_to_invest
 
 
+def monte_carlo_on_all():
+    result=[]
+    counter = 0
+    with open('top50.csv', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        for symbol in data:
+            if(symbol[0] != 'Symbol'):
+                price = monte_carlo(symbol[0])
+                symbolTicker = Ticker(symbol[0])
+                #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
+                realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
+                result.append({"Symbol" : symbol[0],  "Price" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                #print(result)
+    f.close()
+    recommendedStocks = []
+    for i in range(0, len(result)):
+        print(result[i]["Price"])
+        if (result[i]["Price"]>0):
+            recommendedStocks.append(result[i])
+
+    print(recommendedStocks)
+    return recommendedStocks
+
 if __name__ == "__main__":
     # daily_armia_model("A")
     # print(daily_armia_model("F"))
