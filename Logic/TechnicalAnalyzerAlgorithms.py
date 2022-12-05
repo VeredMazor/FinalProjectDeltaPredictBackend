@@ -1,17 +1,20 @@
 import pandas as pd
 import yfinance as yf
 import datetime
+from yahooquery import Ticker
 from datetime import datetime as d
 import pmdarima as pm
 from statsmodels.tsa.arima.model import ARIMA
 from bokeh.plotting import figure, show, output_notebook
 import matplotlib.pyplot as plt
 import seaborn as sns
+from Logic.SentimentAnlysis import get_sentiment_of_stock
 import numpy as np
 import yfinance as yf
 import pandas as pd
 import datetime as dt
 import numpy as np
+import csv
 import json
 import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import adfuller
@@ -23,38 +26,13 @@ from scipy.stats import norm
 from pandas_datareader import data as dr
 
 
-
 # If the test statistic of a time series is less than the critical value of a time series,
 # the time series is stationary. If the p-value is less than or equal to 0.05, the time series is also considered stationary.
-
-def adf_test(series, title=''):
-    """
-    Pass in a time series and an optional title, returns an ADF report
-    """
-    print(f'Augmented Dickey-Fuller Test: {title}')
-    result = adfuller(series.dropna(), autolag='AIC')  # .dropna() handles differenced data
-
-    labels = ['ADF test statistic', 'p-value', '# lags used', '# observations']
-    out = pd.Series(result[0:4], index=labels)
-
-    for key, val in result[4].items():
-        out[f'critical value ({key})'] = val
-
-    print(out.to_string())  # .to_string() removes the line "dtype: float64"
-
-    if result[1] <= 0.05:
-        print("Strong evidence against the null hypothesis")
-        print("Reject the null hypothesis")
-        print("Data has no unit root and is stationary")
-    else:
-        print("Weak evidence against the null hypothesis")
-        print("Fail to reject the null hypothesis")
-        print("Data has a unit root and is non-stationary")
 
 
 def weekly_armia_model(symbol):
     sns.set()
-    #get data of stock
+    # get data of stock
     start_training = datetime.date(2015, 1, 1)
     end_training = datetime.datetime.today()
     start_testing = datetime.date(2022, 6, 1)
@@ -81,22 +59,26 @@ def weekly_armia_model(symbol):
     print(arima_model.summary())
     print(pd.DataFrame(arima_model.predict(n_periods=20)))
     arima_results = arima.fit()
-    #print(arima_results.summary())
+    # print(arima_results.summary())
     # Obtain predicted values
     # Make ARIMA forecast of next 10 values
-    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",typ='levels').summary_frame()
+    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",
+                                                      typ='levels').summary_frame()
     arima_value_forecast["dates"] = arima_value_forecast.index.date
-    res={}
-    res["dates"]= arima_value_forecast["dates"].values.astype("str").tolist()
-    res["mean"]=arima_value_forecast["mean"].values.astype("str").tolist()
+    res = {}
+    res["dates"] = arima_value_forecast["dates"].values.astype("str").tolist()
+    res["mean"] = arima_value_forecast["mean"].values.astype("str").tolist()
     return (res)
-    #plt.plot(arima_value_forecast, label="Predicted")
+    # plt.plot(arima_value_forecast, label="Predicted")
+
 
 def daily_armia_model(symbol):
     # for daily basis
-    data=[]
+    data = []
+
     def parser(x):
         return d.strptime(x, '%Y-%m-%d-%H-%M-%S')
+
     sns.set()
     start_training = datetime.date(2015, 1, 3)
     end_training = datetime.datetime.today()
@@ -114,7 +96,7 @@ def daily_armia_model(symbol):
     # Quantity_date.index = pd.DatetimeIndex(Quantity_date["Date"])
     Quantity_date = Quantity_date.drop(['Date'], axis=1)
     quantity = Quantity_date.values
-    #quantity.index=pd.DatetimeIndex(quantity["Date"])
+    # quantity.index=pd.DatetimeIndex(quantity["Date"])
     # df.set_index(df["Open"], drop=True, append=False, inplace=False, verify_integrity=False)
     # df.drop(columns=["Open", "High", "Low", "Close","Volume"], inplace=True)
     # df.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
@@ -127,34 +109,35 @@ def daily_armia_model(symbol):
                              supress_warnings=True, stepwise=True,
                              random_state=20, n_fits=20)
 
-    #get best model orders
+    # get best model orders
     print(arima_model.summary().tables[0][1][1])
-    arima = ARIMA(quantity, order= arima_model.order, seasonal_order=arima_model.seasonal_order , enforce_stationarity="True")
+    arima = ARIMA(quantity, order=arima_model.order, seasonal_order=arima_model.seasonal_order,
+                  enforce_stationarity="True")
     # Fit ARIMA model
     arima_results = arima.fit()
     print(arima_results.forecast())
     # Obtain predicted values
     # Make ARIMA forecast of next x steps
-    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered", typ='levels').summary_frame()
+    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",
+                                                      typ='levels').summary_frame()
     # Print forecast
-    #print(arima_value_forecast)
-    #plt.plot(arima_value_forecast["mean"], label="Predicted")
+    # print(arima_value_forecast)
+    # plt.plot(arima_value_forecast["mean"], label="Predicted")
     arima_value_forecast.drop(columns=["mean_se", "mean_ci_lower", "mean_ci_upper"], inplace=True)
     # Convert the DataFrame to dict
     dictionaryObject = arima_value_forecast.to_dict();
     return (dictionaryObject)
 
 
-
 def monte_carlo(Symbol):
-    #ticker = 'NVDA'  # GOOGLE stock ticker
+    # ticker = 'NVDA'  # GOOGLE stock ticker
     data = pd.DataFrame(columns=[Symbol])
     data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end='2022-03-23')['Adj Close']
-    print(data.head())
+    # print(data.head())
 
     returns = data.pct_change()
     returns.dropna(inplace=True)
-    print(returns.head())
+    # print(returns.head())
 
     l = norm.ppf(0.10)
     u = norm.ppf(0.85)
@@ -185,11 +168,72 @@ def monte_carlo(Symbol):
     # print('Minimum Simulated Price : {}'.format(np.min(pred)))
     # for j in range(0, cols):
     #     print('Simulated Close Prices after 30 days : {}'.format(pred[-1][j]))
-    result = {"Max":np.max(pred),"Min":np.min(pred)}
+    result = {"Max": np.max(pred), "Min": np.min(pred)}
     return result
+
+
+def arima_on_all():
+    result = {}
+    tickers = []
+    sortedStocks={}
+    print("Current Time =", current_time)
+    #read list of 50 top stocks and make prediction only on 20
+    with open('top50.csv', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        if len(data) != 0:
+            for i in data[1:20]:
+                tickers.append(i[0])
+        # scrape stock news for top 50 S&P500 List
+        for ticker in tickers:
+            data = Ticker(ticker)
+            modules = 'assetProfile earnings defaultKeyStatistics'
+            info = data.get_modules(modules)
+            financial = data.summary_detail
+
+            predict = daily_armia_model(ticker)["mean"][0]
+            close = round(data.price[ticker]["regularMarketPrice"], 3)
+            result[ticker] = {"predcition": predict, "currentPrice": close, "delta": predict - close}
+    stocks_to_invest=[]
+    print(datetime.date)
+    now = datetime.now()
+    # sort stocks from largest growth prediction to smallest
+    sortedStocks = sorted(result.items(), key=lambda x:  x[1]['delta'], reverse=True)[:]
+    print(sortedStocks)
+    for item in sortedStocks:
+        #if stock has positive sentiment add to stocks to invest
+        if float(get_sentiment_of_stock(item[0]).strip())>0:
+            stocks_to_invest.append(str(item[0]))
+    print(stocks_to_invest)
+    return stocks_to_invest
+
+
+def monte_carlo_on_all():
+    result=[]
+    counter = 0
+    with open('top50.csv', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        for symbol in data:
+            if(symbol[0] != 'Symbol'):
+                price = monte_carlo(symbol[0])
+                symbolTicker = Ticker(symbol[0])
+                #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
+                realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
+                result.append({"Symbol" : symbol[0],  "Price" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                #print(result)
+    f.close()
+    recommendedStocks = []
+    for i in range(0, len(result)):
+        print(result[i]["Price"])
+        if (result[i]["Price"]>0):
+            recommendedStocks.append(result[i])
+
+    print(recommendedStocks)
+    return recommendedStocks
 
 if __name__ == "__main__":
     # daily_armia_model("A")
-    print("A")
+    # print(daily_armia_model("F"))
+    print(arima_on_all())
     # ************** PREPROCESSUNG ***********************
-    weekly_armia_model("F")

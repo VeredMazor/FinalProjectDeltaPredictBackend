@@ -1,12 +1,11 @@
-import csv
-from urllib.request import urlopen
-
+# Import libraries
 from bs4 import BeautifulSoup
 from finvizfinance.screener.overview import Overview
 import finviz
 from finvizfinance.quote import finvizfinance
 from flask import jsonify
-# Import libraries
+import csv
+from urllib.request import urlopen
 from pymongo import MongoClient
 import pandas as pd
 from urllib.request import urlopen, Request
@@ -21,13 +20,11 @@ from datetime import date
 from Logic.SentimentAnlysis import sentiment_on_all_files
 
 
+# get monthly stock news headlines from finviz and perform sentiment analysis
 def get_stock_news():
-
     finwiz_url = 'https://finviz.com/quote.ashx?t='
     news_tables = {}
     tickers = []
-    # get current time
-    d = datetime.now()
     # create ticker list from top 50 s&p stocks
     with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
@@ -39,22 +36,24 @@ def get_stock_news():
         # scrape stock news for top 50 S&P500 List
         for ticker in tickers[:50]:
             url = finwiz_url + ticker
+            # user Request library to make http request to fetch the news form the API
             req = Request(url=url, headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0'})
             try:
                 response = urlopen(req)
-                # Read the contents of the file into 'html'
-                html = BeautifulSoup(response, features="lxml")
+                # Read the contents of the response into 'html' using beautiful soup parser
+                content = BeautifulSoup(response, features="lxml")
                 # Find 'news-table' in the Soup and load it into 'news_table'
-                news_table = html.find(id='news-table')
-                # Add the table to our dictionary
+                news_table = content.find(id='news-table')
+                # Add the table to the  dictionary
                 news_tables[ticker] = news_table
 
+            # if there is  a problem with the ticker
             except:
                 news_tables[ticker] = ""
 
         text_list = []
-        # Read one single day of headlines for ‘’
+        # read each stocks data and get only necessary parts
         for t in tickers[:50]:
             stock = news_tables[t]
             try:
@@ -66,17 +65,17 @@ def get_stock_news():
                     a_text = table_row.a.text
                     # Read the text of the element ‘td’ into ‘data_text’
                     td_text = table_row.td.text
+                    # update stock symbol in dict
                     dict["ticker"] = t
-                    currentMonth = datetime.now().month
-                    prevMonth=(datetime.now() + relativedelta.relativedelta(months=-1)).strftime("%b")
-                    last_month = d.strftime("%b")
-                    #get all data of this month
+                    # get previous months name
+                    prevMonth = (datetime.now() + relativedelta.relativedelta(months=-1)).strftime("%b")
+                    # get all data of this month and append to dict
                     if prevMonth not in td_text:
                         dict["date"] = td_text
                         text_list.append(a_text)
-                    else: break
-
-
+                    else:
+                        break
+                #append all the news headlines
                 dict["text"] = text_list
                 df = pd.DataFrame(dict)
                 text_list = []
@@ -88,7 +87,6 @@ def get_stock_news():
     sentiment_on_all_files()
 
 
-
 def get_sp_list():
     # Scrape the entire S&P500 list from Wikipedia into a Pandas DataFrame;
     table = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
@@ -97,10 +95,6 @@ def get_sp_list():
     df.to_csv("S&P500-Symbols.csv", columns=['Symbol'])
 
 
-
-
-
 if __name__ == "__main__":
     dict = {}
     total = 0
-    get_stock_news()
