@@ -320,8 +320,8 @@ def spList():
 if __name__ == "__main__":
     # app.run(debug=True)
     spList()
-    if len(os.listdir("../Logic/newsHeadlines/")) == 0:
-     get_stock_news()
+    #if len(os.listdir("../Logic/newsHeadlines/")) == 0:
+     #get_stock_news()
     #activate FLASK server
     serve(app, host="0.0.0.0", port=5000, threads=30)
     #create lists of active/gainers/losers stocks
