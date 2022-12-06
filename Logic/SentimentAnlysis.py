@@ -94,5 +94,6 @@ def get_sentiment_of_stock(symbol):
     return last_line
 
 
+
 if __name__ == "__main__":
     dict = {}
