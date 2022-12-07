@@ -176,13 +176,12 @@ def arima_on_all():
     result = {}
     tickers = []
     sortedStocks={}
-    print("Current Time =", current_time)
     #read list of 50 top stocks and make prediction only on 20
     with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
         if len(data) != 0:
-            for i in data[1:20]:
+            for i in data[:20]:
                 tickers.append(i[0])
         # scrape stock news for top 50 S&P500 List
         for ticker in tickers:
@@ -195,17 +194,16 @@ def arima_on_all():
             close = round(data.price[ticker]["regularMarketPrice"], 3)
             result[ticker] = {"predcition": predict, "currentPrice": close, "delta": predict - close}
     stocks_to_invest=[]
-    print(datetime.date)
-    now = datetime.now()
-    # sort stocks from largest growth prediction to smallest
-    sortedStocks = sorted(result.items(), key=lambda x:  x[1]['delta'], reverse=True)[:]
-    print(sortedStocks)
-    for item in sortedStocks:
-        #if stock has positive sentiment add to stocks to invest
-        if float(get_sentiment_of_stock(item[0]).strip())>0:
-            stocks_to_invest.append(str(item[0]))
-    print(stocks_to_invest)
-    return stocks_to_invest
+    # # sort stocks from largest growth prediction to smallest
+    # sortedStocks = sorted(result.items(), key=lambda x:  x[1]['delta'], reverse=True)[:]
+    # print(sortedStocks)
+    # for item in sortedStocks:
+    #     #if stock has positive sentiment add to stocks to invest
+    #     if float(get_sentiment_of_stock(item[0]).strip())>0:
+    #         stocks_to_invest.append(str(item[0]))
+    # print(stocks_to_invest)
+    # return stocks_to_invest
+    return result
 
 
 def monte_carlo_on_all():
@@ -214,13 +212,13 @@ def monte_carlo_on_all():
     with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
-        for symbol in data:
+        for symbol in data[:50]:
             if(symbol[0] != 'Symbol'):
                 price = monte_carlo(symbol[0])
                 symbolTicker = Ticker(symbol[0])
                 #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
                 realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
-                result.append({"Symbol" : symbol[0],  "Price" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                result.append({"Symbol" : symbol[0],  "delta" : ((price["Max"] + price["Min"]) / 2) - realPrice})
                 #print(result)
     f.close()
     recommendedStocks = []
@@ -231,6 +229,23 @@ def monte_carlo_on_all():
 
     print(recommendedStocks)
     return recommendedStocks
+
+def monte_carlo_on20():
+    result=[]
+    counter = 0
+    with open('top50.csv', newline='') as f:
+        reader = csv.reader(f)
+        data = list(reader)
+        for symbol in data[:20]:
+            if(symbol[0] != 'Symbol'):
+                price = monte_carlo(symbol[0])
+                symbolTicker = Ticker(symbol[0])
+                #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
+                realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
+                result.append({"Symbol" : symbol[0],  "delta" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                #print(result)
+    f.close()
+    return result
 
 if __name__ == "__main__":
     # daily_armia_model("A")
