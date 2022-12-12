@@ -34,7 +34,7 @@ from yahooquery import Screener
 
 from Logic.WebCrawling import get_stock_news, get_sp_list
 from Logic.SentimentAnlysis import get_sentiment_of_stock
-from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo
+from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo, monte_carlo_on_all
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 

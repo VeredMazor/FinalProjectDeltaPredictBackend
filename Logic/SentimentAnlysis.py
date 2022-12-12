@@ -32,10 +32,11 @@ with open("../Logic/neg.csv", 'r', newline='') as in_file:
 
 # calculate monthly sentiment score according to all news headlines in a file and append the result mean  itno the last row of the file
 def add_score_to_file(symbol):
-    # need to download these for the first time
-    # nltk.download('stopwords')
-    # nltk.download('wordnet')
-    # nltk.download('omw-1.4')
+    #need to download these for the first time
+    #nltk.download('stopwords')
+    #nltk.download('wordnet')
+    #nltk.download('omw-1.4')
+    nltk.download('punkt')
     total = 0
     url = "../Logic/newsHeadlines/" + symbol
     df = pd.read_csv(url)
