@@ -1,6 +1,8 @@
 import pandas as pd
 import yfinance as yf
+
 import datetime
+from datetime import date
 from yahooquery import Ticker
 from datetime import datetime as d
 import pmdarima as pm
@@ -132,7 +134,7 @@ def daily_armia_model(symbol):
 def monte_carlo(Symbol):
     # ticker = 'NVDA'  # GOOGLE stock ticker
     data = pd.DataFrame(columns=[Symbol])
-    data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end='2022-03-23')['Adj Close']
+    data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end=date.today())['Adj Close']
     # print(data.head())
 
     returns = data.pct_change()
@@ -176,7 +178,7 @@ def arima_on_all():
     result = {}
     tickers = []
     sortedStocks={}
-    print("Current Time =", current_time)
+    #print("Current Time =", current_time)
     #read list of 50 top stocks and make prediction only on 20
     with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
@@ -214,6 +216,7 @@ def monte_carlo_on_all():
     with open('top50.csv', newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
+        print("ok")
         for symbol in data:
             if(symbol[0] != 'Symbol'):
                 price = monte_carlo(symbol[0])
