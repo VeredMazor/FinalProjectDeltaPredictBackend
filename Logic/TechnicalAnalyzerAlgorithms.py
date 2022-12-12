@@ -136,7 +136,6 @@ def monte_carlo(Symbol):
     data = pd.DataFrame(columns=[Symbol])
     data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end=date.today())['Adj Close']
     # print(data.head())
-
     returns = data.pct_change()
     returns.dropna(inplace=True)
     # print(returns.head())
