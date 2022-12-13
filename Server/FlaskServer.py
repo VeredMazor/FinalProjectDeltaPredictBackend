@@ -161,7 +161,7 @@ def getFavoriteStocks():
 @cross_origin()
 def addStockToFavoriteStocks():
     req = request.get_json()
-    email = req['Email']["userParam"]
+    email = req['Email']["otherParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):

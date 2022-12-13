@@ -36,7 +36,7 @@ def add_score_to_file(symbol):
     #nltk.download('stopwords')
     #nltk.download('wordnet')
     #nltk.download('omw-1.4')
-    nltk.download('punkt')
+    # nltk.download('punkt')
     total = 0
     url = "../Logic/newsHeadlines/" + symbol
     df = pd.read_csv(url)
