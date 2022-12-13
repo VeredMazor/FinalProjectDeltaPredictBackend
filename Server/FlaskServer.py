@@ -37,9 +37,9 @@ from yahooquery import Ticker
 from Logic.SentimentAnlysis import get_sentiment_of_stock
 from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo
 from Logic.WebCrawling import get_stock_news, get_sp_list
-
-sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 import smtplib, ssl
+sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
+
 
 # create mongoDB refernce and start flask app
 cluster = MongoClient(
