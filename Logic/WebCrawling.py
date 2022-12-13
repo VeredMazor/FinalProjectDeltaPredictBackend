@@ -98,5 +98,3 @@ def get_sp_list():
 if __name__ == "__main__":
     dict = {}
     total = 0
-    get_stock_news()
-
