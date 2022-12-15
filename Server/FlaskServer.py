@@ -1,49 +1,65 @@
-import data as data
-import pymongo
-from flask import Flask, render_template, jsonify, url_for, redirect, Response
-from flask import request, make_response
-from flask_cors import CORS, cross_origin
-import datetime
-import jsonpickle
-import time
 import csv
-import json
-import os
+import data as data
+import datetime
 import flask
-from pymongo import MongoClient, aggregation
-import numpy as np
+import json
 import jsonpickle
+import jsonpickle
+import numpy as np
+import os
 import pandas as pd
-from yahooquery import Ticker
+import pymongo
+import socket
+import sys
+import time
 # Data Source
 import yfinance as yf
-from finvizfinance.quote import finvizfinance
 from finviz.screener import Screener as stockScreener
+from finvizfinance.quote import finvizfinance
 from finvizfinance.screener.overview import Overview
 from flask import Flask, jsonify, Response
+from flask import Flask, render_template, jsonify, url_for, redirect, Response
 from flask import request
+from flask import request, make_response
 from flask_cors import CORS, cross_origin
+from flask_cors import CORS, cross_origin
+from flask_mail import Mail, Message
 from pymongo import MongoClient
+from pymongo import MongoClient, aggregation
 # importing  all the
 # functions defined in test.py
 # import simplejson as json
 # get db
 from waitress import serve
-import sys
 from yahooquery import Screener
+from yahooquery import Ticker
 
-from Logic.WebCrawling import get_stock_news, get_sp_list
 from Logic.SentimentAnlysis import get_sentiment_of_stock
-from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo, monte_carlo_on_all
+from Logic.TechnicalAnalyzerAlgorithms import daily_armia_model, weekly_armia_model, monte_carlo
+from Logic.WebCrawling import get_stock_news, get_sp_list
+from Logic.Integration import get_protfolio_recommendation
+import smtplib, ssl
 
 sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 
-# create mongoDB refernce andt start flask app
+# create mongoDB refernce and start flask app
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
 app = Flask(__name__)
 CORS(app)
+# create DB cluster reference
 db = cluster["DeltaPredictDB"]
+# conigure email parameters
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USERNAME'] = 'irisgrabois@gmail.com'
+app.config['MAIL_PASSWORD'] = 'qiuzcvoctvrqemgf'
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config["EMAIL_HOST_PASSWORD"] = "qiuzcvoctvrqemgf"
+
+# create Mail instance from flask mail module
+mail = Mail(app)
 
 
 # get most active list from API
@@ -80,10 +96,11 @@ def get_stock_data(symbol):
         return res
     return res
 
-#get finacial data of a specific stock from the API
+
+# get finacial data of a specific stock from the API
 def get_specific_stock_data(symbol):
     res = {}
-    #get the API module
+    # get the API module
     data = Ticker(symbol)
     modules = 'assetProfile earnings defaultKeyStatistics'
     info = data.get_modules(modules)
@@ -109,7 +126,8 @@ def get_specific_stock_data(symbol):
     y = json.dumps(x)
     return y
 
-#get stock data according to favorite stocks list
+
+# get stock data according to favorite stocks list
 def favorites_data(ticker_list):
     d = {}
     all_symbols = " ".join(ticker_list)
@@ -141,12 +159,13 @@ def getFavoriteStocks():
             if (itm.get('Email') == email):
                 return favorites_data(itm.get('FavoriteStocks'))
 
-#add stock selected by user to the favoirte list in DB
+
+# add stock selected by user to the favoirte list in DB
 @app.route('/addStocktoFavoriteList', methods=['POST'])
 @cross_origin()
 def addStockToFavoriteStocks():
     req = request.get_json()
-    email = req['Email']["userParam"]
+    email = req['Email']["otherParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):
@@ -158,12 +177,13 @@ def addStockToFavoriteStocks():
                 db.favoriteList.update_one({'Email': email}, {'$push': {'FavoriteStocks': symbol}})
                 return jsonify({'result': "false"})
 
-#delete stock selected by user from the favoirte list in DB
+
+# delete stock selected by user from the favoirte list in DB
 @app.route('/deletStocktoFavoriteList', methods=['POST'])
 @cross_origin()
 def deletStockToFavoriteStocks():
     req = request.get_json()
-    email = req['Email']["otherParam"]
+    email = req['Email']["userParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
         print("true")
@@ -178,7 +198,8 @@ def getData():
     if flask.request.method == 'POST':
         return get_specific_stock_data(req["Symbol"])
 
-#return most active stock financial data
+
+# return most active stock financial data
 @app.route('/activeStockData', methods=['GET'])
 @cross_origin()
 def getMostActive():
@@ -194,6 +215,7 @@ def get_sentiment_score():
     if request.method == 'POST':
         return jsonify(get_sentiment_of_stock(req['symbol']))
 
+
 # get results of monte carlo prediction algoirthm and send to client
 @app.route('/monteCarloResults', methods=['POST'])
 @cross_origin()
@@ -205,6 +227,7 @@ def getMonteCarlo():
         result = monte_carlo(req["Symbol"])
         print(result)
         return result
+
 
 # get results of ARIMA model prediction algorithm and send to client
 @app.route('/arimaResults', methods=['POST'])
@@ -241,7 +264,8 @@ def get_top_gainers():
     if flask.request.method == 'GET':
         return get_stock_data('Top Gainers.csv')
 
-#this function checks if user login details are correct in MONGO DB
+
+# this function checks if user login details are correct in MONGO DB
 @app.route('/authenticate', methods=['GET', 'POST'])
 @cross_origin()
 def check():
@@ -258,7 +282,8 @@ def check():
         json_string = "{'a': 1, 'b': 2}"
         return Response(json_string, mimetype='application/json')
 
-#this function signs up new user and updates the DB
+
+# this function signs up new user and updates the DB
 @app.route('/signnup', methods=['GET', 'POST'])
 @cross_origin()
 def addUser():
@@ -290,14 +315,15 @@ def getUserData():
         return ("itm.get('_id')")
 
 
-#get data for stocks in a specific sector (for ex. ENERGY)
+# get data for stocks in a specific sector (for ex. ENERGY)
 def get_sector_stocks(sector):
     sec = "sec_" + sector["name"]
     filters = ['idx_sp500', 'exch_nasd', sec, 'geo_usa']  # Shows companies in NASDAQ which are in the S&P500
     stock_list = stockScreener(filters=filters, table='Overview', order='price')  # Get the performance ta
     return json.dumps(stock_list.data)
 
-#get data for stocks in a specific sector (for ex. ENERGY)
+
+# get data for stocks in a specific sector (for ex. ENERGY)
 @app.route('/getSectorStocks', methods=['GET', 'POST'])
 @cross_origin()
 def get_Sector_Data():
@@ -315,21 +341,35 @@ def spList():
         get_sp_list()
     finally:
         f.close()
+    # return combined
+
+
+#sending recommendation stocks result to a chosen email
+@app.route("/mail", methods=['GET', 'POST'])
+def index():
+    req = request.get_json()
+    email = req['Email']
+    recipient = [email]
+    if request.method == 'POST':
+        recommendation_stocks = get_protfolio_recommendation()
+        msg = Message("Recommended stock list from DeltaPredict", sender=("delta predict",'irbtebh@yahoo.com'),
+                      recipients=recipient)
+        msg.body = str(recommendation_stocks)
+        mail.send(msg)
+    return "Sent"
 
 
 if __name__ == "__main__":
     # app.run(debug=True)
     spList()
-    if len(os.listdir("../Logic/newsHeadlines/")) == 0:
-     get_stock_news()
-    #activate FLASK server
+    # activate FLASK server
     serve(app, host="0.0.0.0", port=5000, threads=30)
-    #create lists of active/gainers/losers stocks
+    #scrape news headlines and perform sentiment analysis
+    get_stock_news()
+    # create lists of active/gainers/losers stocks
     get_most('Most Active')
     get_most('Top Gainers')
     get_most('Top Losers')
-
-    # app.run(threaded=True)
 
 
 def create_app():

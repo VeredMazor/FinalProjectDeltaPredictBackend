@@ -82,11 +82,13 @@ def daily_armia_model(symbol):
         return d.strptime(x, '%Y-%m-%d-%H-%M-%S')
 
     sns.set()
+    #dateframes for historical prices
     start_training = datetime.date(2015, 1, 3)
     end_training = datetime.datetime.today()
     start_testing = datetime.date(2022, 6, 1)
     end_testing = datetime.datetime.today()
     ticker = symbol
+    #download historical prices
     df = yf.download(ticker, start=start_training, end=end_training, progress=False)
     df = df.reset_index()
     df['Price'] = df['Close']
@@ -95,14 +97,11 @@ def daily_armia_model(symbol):
     pd.set_option('mode.chained_assignment', None)
     Quantity_date['Price'] = Quantity_date['Price'].map(lambda x: float(x))
     Quantity_date = Quantity_date.fillna(Quantity_date.bfill())
-    # Quantity_date.index = pd.DatetimeIndex(Quantity_date["Date"])
-    Quantity_date = Quantity_date.drop(['Date'], axis=1)
-    quantity = Quantity_date.values
-    # quantity.index=pd.DatetimeIndex(quantity["Date"])
-    # df.set_index(df["Open"], drop=True, append=False, inplace=False, verify_integrity=False)
-    # df.drop(columns=["Open", "High", "Low", "Close","Volume"], inplace=True)
-    # df.rename(columns={'Adj Close': 'adj_close'}, inplace=True)
+    Quantity_date = Quantity_date.resample('1D').mean().ffill()
+    #Quantity_date = Quantity_date.drop(['Date'], axis=1)
+    #resample data using forward fill to fill in gaps for days when stock market is closed
 
+    quantity = Quantity_date.values
     arima_model = auto_arima(quantity, start_p=0, d=1, start_q=0,
                              max_p=2, max_d=2, max_q=2, start_P=0,
                              D=1, start_Q=0, max_P=2, max_D=2,
@@ -120,11 +119,9 @@ def daily_armia_model(symbol):
     print(arima_results.forecast())
     # Obtain predicted values
     # Make ARIMA forecast of next x steps
-    arima_value_forecast = arima_results.get_forecast(steps=10, information_set="filtered",
+    arima_value_forecast = arima_results.get_forecast(steps=8, information_set="filtered",
                                                       typ='levels').summary_frame()
-    # Print forecast
-    # print(arima_value_forecast)
-    # plt.plot(arima_value_forecast["mean"], label="Predicted")
+
     arima_value_forecast.drop(columns=["mean_se", "mean_ci_lower", "mean_ci_upper"], inplace=True)
     # Convert the DataFrame to dict
     dictionaryObject = arima_value_forecast.to_dict();
@@ -195,16 +192,6 @@ def arima_on_all():
             predict = daily_armia_model(ticker)["mean"][0]
             close = round(data.price[ticker]["regularMarketPrice"], 3)
             result[ticker] = {"predcition": predict, "currentPrice": close, "delta": predict - close}
-    stocks_to_invest=[]
-    # # sort stocks from largest growth prediction to smallest
-    # sortedStocks = sorted(result.items(), key=lambda x:  x[1]['delta'], reverse=True)[:]
-    # print(sortedStocks)
-    # for item in sortedStocks:
-    #     #if stock has positive sentiment add to stocks to invest
-    #     if float(get_sentiment_of_stock(item[0]).strip())>0:
-    #         stocks_to_invest.append(str(item[0]))
-    # print(stocks_to_invest)
-    # return stocks_to_invest
     return result
 
 
@@ -253,4 +240,6 @@ if __name__ == "__main__":
     # daily_armia_model("A")
     # print(daily_armia_model("F"))
     print(arima_on_all())
+    #print(daily_armia_model("TSLA"))
+    #arima_on_all()
     # ************** PREPROCESSUNG ***********************
