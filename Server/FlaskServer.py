@@ -58,6 +58,7 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 app.config["EMAIL_HOST_PASSWORD"] = "qiuzcvoctvrqemgf"
 
+
 # create Mail instance from flask mail module
 mail = Mail(app)
 
@@ -360,16 +361,25 @@ def index():
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
+    #app.run(debug=True)
     spList()
+    def run():
+        #from webapp import app
+        app.run(debug=True, use_reloader=False)
     # activate FLASK server
-    serve(app, host="0.0.0.0", port=5000, threads=30)
+    run()
+    with app.app_context():
+        get_stock_news()
+        get_most('Most Active')
+        get_most('Top Gainers')
+        get_most('Top Losers')
+    #run()
+    #serve(app, host="0.0.0.0", port=5000, threads=30)
+    print("!")
+    #get_stock_news()
     #scrape news headlines and perform sentiment analysis
-    get_stock_news()
+    #get_stock_news()
     # create lists of active/gainers/losers stocks
-    get_most('Most Active')
-    get_most('Top Gainers')
-    get_most('Top Losers')
 
 
 def create_app():

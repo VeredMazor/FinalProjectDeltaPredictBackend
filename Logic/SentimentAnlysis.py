@@ -4,12 +4,14 @@ from nltk.corpus import opinion_lexicon
 import pandas as pd
 import csv
 import os
+from pymongo import MongoClient, aggregation
 from nltk import sent_tokenize
 from nltk import word_tokenize
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 import re
+import itertools
 
 # assign directory
 directory = '../Logic/newsHeadlines/'
@@ -18,6 +20,13 @@ pos_list = list(opinion_lexicon.positive())
 neg_list = list(opinion_lexicon.negative())
 positive = []
 negative = []
+symbols=["AAPL","MSFT","AMZN","TSLA","UNH","GOOGL","XOM","JNJ","GOOG","JPM","NVDA","CVX",'V',"PG","HD","LLY","MA","PFE","ABBV","BAC","MRK","PEP","KO","COST","META",
+"MCD","WMT","TMO","CSCO","DIS","AVGO","WFC","COP","ABT","BMY","ACN","DHR","VZ","NEE","LIN","CRM","TXN","AMGN","RTX","HON","PM","ADBE","CMCSA"]
+# create mongoDB refernce and start flask app
+cluster = MongoClient(
+    "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+# create DB cluster reference
+db = cluster["DeltaPredictDB"]
 
 # combine the lists we created with the LoughranMcDonald Master Dictionary
 with open("../Logic/pos.csv", 'r', newline='') as in_file:
@@ -38,8 +47,14 @@ def add_score_to_file(symbol):
     #nltk.download('omw-1.4')
     # nltk.download('punkt')
     total = 0
-    url = "../Logic/newsHeadlines/" + symbol
-    df = pd.read_csv(url)
+    # Creating Empty DataFrame and Storing it in variable df
+    df = []
+    # url = "../Logic/newsHeadlines/" + symbol
+    # df = pd.read_csv(url)
+    for itm in db.newsHeadlines.find({"ticker": symbol}):
+        if itm.get('ticker') == symbol:
+            df.append(itm)
+    #df=pd.DataFrame(df)
     lemmatizer = WordNetLemmatizer()
     # get a list of stop words in english
     stop_words = stopwords.words('english')
@@ -53,48 +68,53 @@ def add_score_to_file(symbol):
         word_list = [t for t in token_list if t not in stop_words]
         lemmatize = [lemmatizer.lemmatize(w) for w in word_list]
         return lemmatize
+    res=[]
+    #res=list(itertools.chain.from_iterable(res))
 
     # preproccess each word
-    preprocess_tag = [text_prep(i) for i in df['text']]
+    preprocess_tag = [text_prep(i["text"]) for i in df]
+    preprocess_tag=list(itertools.chain.from_iterable(preprocess_tag))
+    df={}
     df["preprocess_txt"] = preprocess_tag
-    df['total_len'] = df['preprocess_txt'].map(lambda x: len(x))
+    df['total_len'] = len(df['preprocess_txt'])
 
-    #calculate number of positive and negative words according to the lists we created
-    num_pos = df['preprocess_txt'].map(lambda x: len([i for i in x if i in positive]))
+    # calculate number of positive and negative words according to the lists we created
+    num_pos = len([i for i in  df["preprocess_txt"]  if i in positive])
     df['pos_count'] = num_pos
-    num_neg = df['preprocess_txt'].map(lambda x: len([i for i in x if i in negative]))
+    num_neg = len([i for i in  df["preprocess_txt"]  if i in negative])
     df['neg_count'] = num_neg
     field_names = ['sentiment_score']
-    #compute final score based on mean of (pos-negative)/total
+    # compute final score based on mean of (pos-negative)/total
     try:
-        df['sentiment_score'] = round((df['pos_count'] - df['neg_count']) / df['total_len'], 2)
-        sentiment_score = round(df['sentiment_score'].sum().mean(), 2)
-        row_dict = {'sentiment_score': sentiment_score}
+        df['sentiment_score'] = (df['pos_count']/ (df['neg_count']+1))
+        #sentiment_score = round(df['sentiment_score'].sum().mean(), 2)
+        row_dict = {"symbol":symbol,'sentiment_score': round(df['sentiment_score'],2) }
+        db.sentimentScores.insert_one(row_dict)
     except:
         row_dict = {'sentiment_score': 0}
-    #write the score into a file
-    with open('../Logic/newsHeadlines/' + symbol, 'a') as csv_file:
-        dict_object = csv.DictWriter(csv_file, fieldnames=field_names)
-        dict_object.writerow(row_dict)
+
+    # with open('../Logic/newsHeadlines/' + symbol, 'a') as csv_file:
+    #     dict_object = csv.DictWriter(csv_file, fieldnames=field_names)
+    #     dict_object.writerow(row_dict)
 
 #perform sentiment calculation on all files from the top 50 s&p list
 def sentiment_on_all_files():
     # iterate over files in the news directory and calculate sentiment
-    for filename in os.listdir(directory):
-        f = os.path.join(directory, filename)
-        # checking if it is a file
-        if os.path.isfile(f):
-            # add to file sentiment of all the lines totsl
-            add_score_to_file(str(f)[23:])
+    for s in symbols:
+        add_score_to_file(s)
 
 #get stocks monthly sentiment from the end of the file
-def get_sentiment_of_stock(symbol):
-    url = "../Logic/newsHeadlines/" + symbol + ".csv"
-    with open(url, 'r') as f:
-        last_line = f.readlines()[-2]
-    return last_line
+def get_sentiment_of_stock(ticker):
+    # url = "../Logic/newsHeadlines/" + symbol + ".csv"
+    # with open(url, 'r') as f:
+    #     last_line = f.readlines()[-2]
+    # return last_line
+    for itm in db.sentimentScores.find({"symbol": ticker}):
+        if itm.get('symbol') == ticker:
+            return itm["sentiment_score"]
 
 
 
 if __name__ == "__main__":
     dict = {}
+    print(get_sentiment_of_stock("AAPL"))

@@ -9,15 +9,17 @@ def get_protfolio_recommendation():
     monte_carlo=monte_carlo_on20()
     for i in monte_carlo:
         combined[i["Symbol"]]=(i["delta"]+arima[i["Symbol"]]["delta"])/2
+        combined[i["Sentiment"]] = get_sentiment_of_stock(item[0]).strip()
     stocks_to_invest = []
     # # sort stocks from largest growth prediction to smallest
     sortedStocks = sorted(combined.items(), key=lambda x:  x[1], reverse=True)[:]
+    sortedStocks = sorted(combined.items(), key=lambda x: x[2], reverse=True)[:]
+    print(sortedStocks)
     #print(sortedStocks)
-    for item in sortedStocks:
-        #if stock has positive sentiment add to stocks to invest
-        if float(get_sentiment_of_stock(item[0]).strip())>0:
-            stocks_to_invest.append(str(item[0]))
-    print(stocks_to_invest[:5])
+    # for item in sortedStocks:
+    #     #if stock has positive sentiment add to stocks to invest
+    #         stocks_to_invest.append(str(item[0]))
+    # print(stocks_to_invest[:5])
     # !/usr/bin/python
     #
     # import smtplib

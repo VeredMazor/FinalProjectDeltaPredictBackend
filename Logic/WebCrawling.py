@@ -12,16 +12,24 @@ from urllib.request import urlopen, Request
 from datetime import date as date1
 import traceback
 import csv
-
+from pymongo import MongoClient
+from pymongo import MongoClient, aggregation
 # importing datetime module
 from datetime import *
 import dateutil.relativedelta as relativedelta
 from datetime import date
 from Logic.SentimentAnlysis import sentiment_on_all_files
 
-
+# create mongoDB refernce and start flask app
+cluster = MongoClient(
+    "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+# create DB cluster reference
+db = cluster["DeltaPredictDB"]
 # get monthly stock news headlines from finviz and perform sentiment analysis
 def get_stock_news():
+    print("hey")
+    db.newsHeadlines.drop()
+    db.sentimentScores.drop()
     finwiz_url = 'https://finviz.com/quote.ashx?t='
     news_tables = {}
     tickers = []
@@ -30,7 +38,7 @@ def get_stock_news():
         reader = csv.reader(f)
         data = list(reader)
         if len(data) != 0:
-            for i in data[1:]:
+            for i in data[:]:
                 tickers.append(i[0])
     try:
         # scrape stock news for top 50 S&P500 List
@@ -78,8 +86,10 @@ def get_stock_news():
                 #append all the news headlines
                 dict["text"] = text_list
                 df = pd.DataFrame(dict)
+
                 text_list = []
-                df.to_csv('../Logic/newsHeadlines/' + t + ".csv", columns=['text'], index=True)
+                #df.to_csv('../Logic/newsHeadlines/' + t + ".csv", columns=['text'], index=True)
+                db.newsHeadlines.insert_many(df.to_dict('records'))
             except  Exception:
                 traceback.print_exc()
     except  Exception:
