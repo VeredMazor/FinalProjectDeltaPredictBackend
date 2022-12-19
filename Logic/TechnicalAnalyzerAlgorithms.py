@@ -130,9 +130,18 @@ def daily_armia_model(symbol):
 
 def monte_carlo(Symbol):
     # ticker = 'NVDA'  # GOOGLE stock ticker
+    x = datetime.datetime.now()
+
+    start = dt.datetime(2011, 10, 1)
+    end = dt.datetime(x.year, int(x.strftime("%m")), int(x.strftime("%d")))
+    print(end)
     data = pd.DataFrame(columns=[Symbol])
-    data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end=date.today())['Adj Close']
-    # print(data.head())
+    yahooData = yf.download(Symbol, start, end)
+    count = len(yahooData)
+
+    for i in range(count):
+        data.loc[i] = [yahooData['Adj Close'][i]]
+
     returns = data.pct_change()
     returns.dropna(inplace=True)
     # print(returns.head())
@@ -160,14 +169,12 @@ def monte_carlo(Symbol):
     pred[0] = s  # sets beginning point of simulations
     for i in range(1, 30):
         pred[i] = pred[(i - 1)] * (1 + n[(i - 1)])
-
-    # print('\n')
-    # print('Maximum Simulated Price : {}'.format(np.max(pred)))
-    # print('Minimum Simulated Price : {}'.format(np.min(pred)))
-    # for j in range(0, cols):
-    #     print('Simulated Close Prices after 30 days : {}'.format(pred[-1][j]))
-    result = {"Max": np.max(pred), "Min": np.min(pred)}
+    daily = 0
+    for j in range(0, cols):
+        daily = daily + pred[-29][j]
+    result = {"Max": np.max(pred), "Min": np.min(pred), "DailyPrice": daily/10}
     return result
+
 
 
 def arima_on_all():
@@ -207,7 +214,7 @@ def monte_carlo_on_all():
                 symbolTicker = Ticker(symbol[0])
                 #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
                 realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
-                result.append({"Symbol" : symbol[0],  "delta" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                result.append({"Symbol" : symbol[0],  "delta" : (price["DailyPrice"] - realPrice)})
                 #print(result)
     f.close()
     recommendedStocks = []
@@ -231,7 +238,7 @@ def monte_carlo_on20():
                 symbolTicker = Ticker(symbol[0])
                 #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
                 realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
-                result.append({"Symbol" : symbol[0],  "delta" : ((price["Max"] + price["Min"]) / 2) - realPrice})
+                result.append({"Symbol" : symbol[0],  "delta" : (price["DailyPrice"] - realPrice)})
                 #print(result)
     f.close()
     return result
