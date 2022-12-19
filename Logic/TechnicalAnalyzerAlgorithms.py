@@ -130,8 +130,10 @@ def daily_armia_model(symbol):
 
 def monte_carlo(Symbol):
     # ticker = 'NVDA'  # GOOGLE stock ticker
+    print(Symbol)
     data = pd.DataFrame(columns=[Symbol])
-    data[Symbol] = dr.DataReader(Symbol, data_source='yahoo', start='2008-1-1', end=date.today())['Adj Close']
+    print(data)
+    data[Symbol] = dr.DataReader(Symbol, data_source = 'yahoo', start = '2008-1-1', end = date.today())['Adj Close']
     # print(data.head())
     returns = data.pct_change()
     returns.dropna(inplace=True)
@@ -168,6 +170,7 @@ def monte_carlo(Symbol):
     #     print('Simulated Close Prices after 30 days : {}'.format(pred[-1][j]))
     result = {"Max": np.max(pred), "Min": np.min(pred)}
     return result
+
 
 
 def arima_on_all():
