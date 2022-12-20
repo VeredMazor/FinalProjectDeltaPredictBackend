@@ -239,7 +239,7 @@ def monte_carlo_on20():
                 #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
                 realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
                 result.append({"Symbol" : symbol[0],  "delta" : (price["DailyPrice"] - realPrice)})
-                #print(result)
+                print(result)
     f.close()
     return result
 
