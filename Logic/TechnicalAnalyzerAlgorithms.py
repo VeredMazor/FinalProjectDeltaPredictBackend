@@ -111,12 +111,10 @@ def daily_armia_model(symbol):
                              random_state=20, n_fits=20)
 
     # get best model orders
-    print(arima_model.summary().tables[0][1][1])
     arima = ARIMA(quantity, order=arima_model.order, seasonal_order=arima_model.seasonal_order,
                   enforce_stationarity="True")
     # Fit ARIMA model
     arima_results = arima.fit()
-    print(arima_results.forecast())
     # Obtain predicted values
     # Make ARIMA forecast of next x steps
     arima_value_forecast = arima_results.get_forecast(steps=8, information_set="filtered",
@@ -239,7 +237,7 @@ def monte_carlo_on20():
                 #print(symbolTicker.price[symbol[0]]["regularMarketPrice"])
                 realPrice = symbolTicker.price[symbol[0]]["regularMarketPrice"]
                 result.append({"Symbol" : symbol[0],  "delta" : (price["DailyPrice"] - realPrice)})
-                #print(result)
+                print(result)
     f.close()
     return result
 

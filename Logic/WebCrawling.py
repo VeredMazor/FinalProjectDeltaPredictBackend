@@ -25,9 +25,10 @@ cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
 # create DB cluster reference
 db = cluster["DeltaPredictDB"]
+
+
 # get monthly stock news headlines from finviz and perform sentiment analysis
 def get_stock_news():
-    print("hey")
     db.newsHeadlines.drop()
     db.sentimentScores.drop()
     finwiz_url = 'https://finviz.com/quote.ashx?t='
@@ -83,17 +84,19 @@ def get_stock_news():
                         text_list.append(a_text)
                     else:
                         break
-                #append all the news headlines
+                # append all the news headlines
                 dict["text"] = text_list
                 df = pd.DataFrame(dict)
 
                 text_list = []
-                #df.to_csv('../Logic/newsHeadlines/' + t + ".csv", columns=['text'], index=True)
-                db.newsHeadlines.insert_many(df.to_dict('records'))
+                # df.to_csv('../Logic/newsHeadlines/' + t + ".csv", columns=['text'], index=True)
+                if not  df.empty:
+                    db.newsHeadlines.insert_many(df.to_dict('records'))
             except  Exception:
-                traceback.print_exc()
+                exc = traceback.print_exc()
+                # traceback.print_exc()
     except  Exception:
-        traceback.print_exc()
+        exc = traceback.print_exc()
     sentiment_on_all_files()
 
 

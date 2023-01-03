@@ -71,6 +71,7 @@ def get_most(signal):
         df = foverview.screener_view()
         df.to_csv(signal + '.csv', columns=['Ticker'], mode='w')
     except:
+        open(signal + '.csv', 'w').close()
         return
 
 
@@ -183,7 +184,7 @@ def addStockToFavoriteStocks():
 @cross_origin()
 def deletStockToFavoriteStocks():
     req = request.get_json()
-    email = req['Email']["userParam"]
+    email = req['Email']["otherParam"]
     symbol = req['Symbol']
     if request.method == 'POST':
         print("true")
@@ -235,11 +236,13 @@ def getMonteCarlo():
 def getArimaARes():
     result = {}
     req = request.get_json()
+    print(req)
     if flask.request.method == 'POST':
         # get weekly and daily arima prediction result
-        print(req)
         result["weekly"] = weekly_armia_model(req["Symbol"])
+        print(request.headers)
         result["daily"] = daily_armia_model(req["Symbol"])
+        print(request.headers)
         return result
 
 
@@ -361,15 +364,20 @@ def index():
 
 if __name__ == "__main__":
     # app.run(debug=True)
+    # app.run(debug=True)
     spList()
-    # activate FLASK server
-    serve(app, host="0.0.0.0", port=5000, threads=30)
-    #scrape news headlines and perform sentiment analysis
-    get_stock_news()
-    # create lists of active/gainers/losers stocks
-    get_most('Most Active')
-    get_most('Top Gainers')
-    get_most('Top Losers')
+    def run():
+        # from webapp import app
+        app.run(debug=True, use_reloader=False)
+    with app.app_context():
+        get_stock_news()
+        # # create lists of active/gainers/losers stocks
+        get_most('Most Active')
+        # get_most('Top Gainers')
+        # get_most('Top Losers')
+    run()
+    # serve(app, host="0.0.0.0", port=5000, threads=30)
+
 
 
 def create_app():
