@@ -243,10 +243,3 @@ def monte_carlo_on20():
     f.close()
     return result
 
-if __name__ == "__main__":
-    # daily_armia_model("A")
-    # print(daily_armia_model("F"))
-    print(arima_on_all())
-    #print(daily_armia_model("TSLA"))
-    #arima_on_all()
-    # ************** PREPROCESSUNG ***********************
