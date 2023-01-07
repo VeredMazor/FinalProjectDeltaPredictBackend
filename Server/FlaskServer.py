@@ -298,6 +298,8 @@ def addUser():
         else:
             insert = {'Email': req["Email"], 'Password': req["Password"]}
             db.users.insert_one(insert)
+            insert = {'Email': req["Email"],'FavoriteStocks' : []}
+            db.favoriteList.insert_one(insert)
             return jsonify({'result': "true"})
 
 
@@ -373,8 +375,8 @@ if __name__ == "__main__":
         get_stock_news()
         # # create lists of active/gainers/losers stocks
         get_most('Most Active')
-        # get_most('Top Gainers')
-        # get_most('Top Losers')
+        get_most('Top Gainers')
+        get_most('Top Losers')
     run()
     # serve(app, host="0.0.0.0", port=5000, threads=30)
 
