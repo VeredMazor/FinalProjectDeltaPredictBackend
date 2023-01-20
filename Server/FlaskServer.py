@@ -166,8 +166,8 @@ def getFavoriteStocks():
 @cross_origin()
 def addStockToFavoriteStocks():
     req = request.get_json()
-    email = req['Email']["otherParam"]
-    symbol = req['Symbol']
+    email = req["Email"]
+    symbol = req["Symbol"]
     if request.method == 'POST':
         for itm in db.favoriteList.find({"Email": email}):
             if symbol in itm['FavoriteStocks']:
@@ -298,6 +298,8 @@ def addUser():
         else:
             insert = {'Email': req["Email"], 'Password': req["Password"]}
             db.users.insert_one(insert)
+            insert = {'Email': req["Email"],'FavoriteStocks' : []}
+            db.favoriteList.insert_one(insert)
             return jsonify({'result': "true"})
 
 
@@ -368,13 +370,14 @@ if __name__ == "__main__":
     spList()
     def run():
         # from webapp import app
-        app.run(debug=True, use_reloader=False)
+        #app.run(debug=True, use_reloader=False)
+        serve(app, host="0.0.0.0", port=5000, threads=30)
     with app.app_context():
         get_stock_news()
         # # create lists of active/gainers/losers stocks
         get_most('Most Active')
-        # get_most('Top Gainers')
-        # get_most('Top Losers')
+        get_most('Top Gainers')
+        get_most('Top Losers')
     run()
     # serve(app, host="0.0.0.0", port=5000, threads=30)
 
