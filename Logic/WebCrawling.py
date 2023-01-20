@@ -6,13 +6,11 @@ from finvizfinance.quote import finvizfinance
 from flask import jsonify
 import csv
 from urllib.request import urlopen
-from pymongo import MongoClient
 import pandas as pd
 from urllib.request import urlopen, Request
 from datetime import date as date1
 import traceback
 import csv
-from pymongo import MongoClient
 from pymongo import MongoClient, aggregation
 # importing datetime module
 from datetime import *
@@ -29,6 +27,7 @@ db = cluster["DeltaPredictDB"]
 
 # get monthly stock news headlines from finviz and perform sentiment analysis
 def get_stock_news():
+    # drop tables in DB to insert newest data
     db.newsHeadlines.drop()
     db.sentimentScores.drop()
     finwiz_url = 'https://finviz.com/quote.ashx?t='
@@ -70,9 +69,7 @@ def get_stock_news():
                 stock_tr = stock.findAll('tr')
                 for i, table_row in enumerate(stock_tr):
                     dict = {}
-                    # Read the text of the element ‘a’ into ‘link_text’
                     a_text = table_row.a.text
-                    # Read the text of the element ‘td’ into ‘data_text’
                     td_text = table_row.td.text
                     # update stock symbol in dict
                     dict["ticker"] = t
@@ -87,16 +84,14 @@ def get_stock_news():
                 # append all the news headlines
                 dict["text"] = text_list
                 df = pd.DataFrame(dict)
-
                 text_list = []
-                # df.to_csv('../Logic/newsHeadlines/' + t + ".csv", columns=['text'], index=True)
-                if not  df.empty:
+                if not df.empty:
                     db.newsHeadlines.insert_many(df.to_dict('records'))
             except  Exception:
                 exc = traceback.print_exc()
-                # traceback.print_exc()
     except  Exception:
         exc = traceback.print_exc()
+    # perform sentiment analysis on all stocks
     sentiment_on_all_files()
 
 
@@ -106,8 +101,3 @@ def get_sp_list():
     df = table[0]
     df.to_csv('S&P500-Info.csv')
     df.to_csv("S&P500-Symbols.csv", columns=['Symbol'])
-
-
-if __name__ == "__main__":
-    dict = {}
-    total = 0

@@ -2,46 +2,22 @@ from Logic.TechnicalAnalyzerAlgorithms import arima_on_all, monte_carlo_on20
 from Logic.SentimentAnlysis import get_sentiment_of_stock
 
 
+# this function combines the prediciton result of arima model and monte carlo simulation. It returns the 5 stocks with
+# the highest growth and highest sentiment
 def get_protfolio_recommendation():
-    combined={}
+    combined = {}
     sortedStocks = {}
-    arima=arima_on_all()
-    monte_carlo=monte_carlo_on20()
+    arima = arima_on_all()
+    monte_carlo = monte_carlo_on20()
+    #make an average between the two predictions
     for i in monte_carlo:
-        combined[i["Symbol"]]=(i["delta"]+arima[i["Symbol"]]["delta"])/2
+        combined[i["Symbol"]] = (i["delta"] + arima[i["Symbol"]]["delta"]) / 2
         combined[i["Sentiment"]] = get_sentiment_of_stock(item[0]).strip()
     stocks_to_invest = []
-    # # sort stocks from largest growth prediction to smallest
-    sortedStocks = sorted(combined.items(), key=lambda x:  x[1], reverse=True)[:]
+    # sort stocks from the largest growth prediction to smallest
+    sortedStocks = sorted(combined.items(), key=lambda x: x[1], reverse=True)[:]
     sortedStocks = sorted(combined.items(), key=lambda x: x[2], reverse=True)[:]
     print(sortedStocks)
-    #print(sortedStocks)
-    # for item in sortedStocks:
-    #     #if stock has positive sentiment add to stocks to invest
-    #         stocks_to_invest.append(str(item[0]))
-    # print(stocks_to_invest[:5])
-    # !/usr/bin/python
-    #
-    # import smtplib
-    #
-    # sender = 'irbtebh@yahoo.com'
-    # receivers = ['irisgrabois@gmail.com']
-    #
-    # message = stocks_to_invest[:5]
-    #
-    # try:
-    #     smtpObj = smtplib.SMTP('localhost')
-    #     smtpObj.sendmail(sender, receivers, message)
-    #     print( "Successfully sent email")
-    #
-    # except SMTPException:
-    #     print(  "Error: unable to send email")
-    #     "Error: unable to send email"
     return stocks_to_invest[:5]
 
-    #return combined
-if __name__ == "__main__":
-    # daily_armia_model("A")
-    # print(daily_armia_model("F"))
-    print(get_protfolio_recommendation())
-    # ************** PREPROCESSUNG ***********************
+

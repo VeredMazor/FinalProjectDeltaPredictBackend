@@ -20,8 +20,11 @@ pos_list = list(opinion_lexicon.positive())
 neg_list = list(opinion_lexicon.negative())
 positive = []
 negative = []
+
+#top 50 symbols list
 symbols=["AAPL","MSFT","AMZN","TSLA","UNH","GOOGL","XOM","JNJ","GOOG","JPM","NVDA","CVX",'V',"PG","HD","LLY","MA","PFE","ABBV","BAC","MRK","PEP","KO","COST","META",
 "MCD","WMT","TMO","CSCO","DIS","AVGO","WFC","COP","ABT","BMY","ACN","DHR","VZ","NEE","LIN","CRM","TXN","AMGN","RTX","HON","PM","ADBE","CMCSA"]
+
 # create mongoDB refernce and start flask app
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
@@ -49,12 +52,10 @@ def add_score_to_file(symbol):
     total = 0
     # Creating Empty DataFrame and Storing it in variable df
     df = []
-    # url = "../Logic/newsHeadlines/" + symbol
-    # df = pd.read_csv(url)
     for itm in db.newsHeadlines.find({"ticker": symbol}):
         if itm.get('ticker') == symbol:
             df.append(itm)
-    #df=pd.DataFrame(df)
+
     lemmatizer = WordNetLemmatizer()
     # get a list of stop words in english
     stop_words = stopwords.words('english')
@@ -69,8 +70,6 @@ def add_score_to_file(symbol):
         lemmatize = [lemmatizer.lemmatize(w) for w in word_list]
         return lemmatize
     res=[]
-    #res=list(itertools.chain.from_iterable(res))
-
     # preproccess each word
     preprocess_tag = [text_prep(i["text"]) for i in df]
     preprocess_tag=list(itertools.chain.from_iterable(preprocess_tag))
@@ -93,10 +92,6 @@ def add_score_to_file(symbol):
     except:
         row_dict = {'sentiment_score': 0}
 
-    # with open('../Logic/newsHeadlines/' + symbol, 'a') as csv_file:
-    #     dict_object = csv.DictWriter(csv_file, fieldnames=field_names)
-    #     dict_object.writerow(row_dict)
-
 #perform sentiment calculation on all files from the top 50 s&p list
 def sentiment_on_all_files():
     # iterate over files in the news directory and calculate sentiment
@@ -105,16 +100,7 @@ def sentiment_on_all_files():
 
 #get stocks monthly sentiment from the end of the file
 def get_sentiment_of_stock(ticker):
-    # url = "../Logic/newsHeadlines/" + symbol + ".csv"
-    # with open(url, 'r') as f:
-    #     last_line = f.readlines()[-2]
-    # return last_line
     for itm in db.sentimentScores.find({"symbol": ticker}):
         if itm.get('symbol') == ticker:
             return itm["sentiment_score"]
 
-
-
-if __name__ == "__main__":
-    dict = {}
-    print(get_sentiment_of_stock("AAPL"))
