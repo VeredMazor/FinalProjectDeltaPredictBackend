@@ -45,11 +45,13 @@ sys.path.insert(0, '\FinalProjectDeltaPredictBackend\Logic')
 # create mongoDB refernce and start flask app
 cluster = MongoClient(
     "mongodb+srv://DeltaPredict:y8RD27dwwmBnUEU@cluster0.7yz0lgf.mongodb.net/?retryWrites=true&w=majority")
+#create FLASK app instance
 app = Flask(__name__)
 CORS(app)
 # create DB cluster reference
 db = cluster["DeltaPredictDB"]
-# conigure email parameters
+
+# configure email parameters
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'irisgrabois@gmail.com'
@@ -60,7 +62,6 @@ app.config["EMAIL_HOST_PASSWORD"] = "qiuzcvoctvrqemgf"
 
 # create Mail instance from flask mail module
 mail = Mail(app)
-
 
 # get most active list from API
 def get_most(signal):
@@ -98,7 +99,7 @@ def get_stock_data(symbol):
     return res
 
 
-# get finacial data of a specific stock from the API
+# get financial data of a specific stock from the API
 def get_specific_stock_data(symbol):
     res = {}
     # get the API module
@@ -122,7 +123,6 @@ def get_specific_stock_data(symbol):
         "regularMarketChange": ' {:+.2f}'.format(data.price[symbol]["regularMarketChange"], 3),
         "fiftyTwoWeekLow": str(financial[symbol]['fiftyTwoWeekLow']),
         "fiftyTwoWeekHigh": str(financial[symbol]['fiftyTwoWeekHigh']),
-        "recommendation": str(data.financial_data[symbol]["recommendationKey"]),
     }
     y = json.dumps(x)
     return y
@@ -292,7 +292,7 @@ def check():
 def addUser():
     req = request.get_json()
     if request.method == 'POST':
-
+        #check if use already exists
         if db.users.count_documents({'Email': req["Email"], 'Password': req["Password"]}, limit=1) != 0:
             return jsonify({'result': "false"})
         else:
@@ -340,14 +340,11 @@ def get_Sector_Data():
 def spList():
     try:
         f = open("S&P500-Symbols.csv")
-        # Do something with the file
     except IOError:
         print("File not accessible")
         get_sp_list()
     finally:
         f.close()
-    # return combined
-
 
 #sending recommendation stocks result to a chosen email
 @app.route("/mail", methods=['GET', 'POST'])
@@ -365,12 +362,8 @@ def index():
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
-    # app.run(debug=True)
     spList()
     def run():
-        # from webapp import app
-        #app.run(debug=True, use_reloader=False)
         serve(app, host="0.0.0.0", port=5000, threads=30)
     with app.app_context():
         get_stock_news()
@@ -378,10 +371,8 @@ if __name__ == "__main__":
         get_most('Most Active')
         get_most('Top Gainers')
         get_most('Top Losers')
+        print("server is active now")
     run()
-    # serve(app, host="0.0.0.0", port=5000, threads=30)
-
-
 
 def create_app():
     return app
