@@ -11,13 +11,18 @@ def get_protfolio_recommendation():
     monte_carlo = monte_carlo_on20()
     #make an average between the two predictions
     for i in monte_carlo:
-        combined[i["Symbol"]] = (i["delta"] + arima[i["Symbol"]]["delta"]) / 2
-        combined[i["Sentiment"]] = get_sentiment_of_stock(item[0]).strip()
+        combined[i["Symbol"]] = (((i["delta"] + arima[i["Symbol"]]["delta"]) / 2),get_sentiment_of_stock(i["Symbol"]))
+        #combined[i["Sentiment"]] = get_sentiment_of_stock(i["Symbol"])
     stocks_to_invest = []
     # sort stocks from the largest growth prediction to smallest
-    sortedStocks = sorted(combined.items(), key=lambda x: x[1], reverse=True)[:]
-    sortedStocks = sorted(combined.items(), key=lambda x: x[2], reverse=True)[:]
+    sortedStocks = sorted(combined.items(), key=lambda x: (x[1][0], x[1][1]), reverse=True)[:]
+    #sortedStocks = sorted(combined.items(), key=lambda x:  x[1][1], reverse=True)[:]
     print(sortedStocks)
     return stocks_to_invest[:5]
+
+
+
+if __name__ == "__main__":
+    get_protfolio_recommendation()
 
 
