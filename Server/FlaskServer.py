@@ -55,10 +55,10 @@ db = cluster["DeltaPredictDB"]
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'irisgrabois@gmail.com'
-app.config['MAIL_PASSWORD'] = 'qiuzcvoctvrqemgf'
+# app.config['MAIL_PASSWORD'] =
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
-app.config["EMAIL_HOST_PASSWORD"] = "qiuzcvoctvrqemgf"
+# app.config["EMAIL_HOST_PASSWORD"] =
 
 # create Mail instance from flask mail module
 mail = Mail(app)
